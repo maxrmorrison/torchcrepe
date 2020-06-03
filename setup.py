@@ -3,10 +3,11 @@ from setuptools import setup, find_packages
 
 setup(
     name='torchcrepe',
+    description='Pytorch implementation of CREPE pitch tracker',
     version='0.0.0',
-    url='https://github.com/maxrmorrison/torchcrepe',
     author='Max Morrison',
     author_email='maxrmorrison@gmail.com',
-    description='Pytorch implementation of CREPE pitch tracker',
+    url='https://github.com/maxrmorrison/torchcrepe',
+    install_requires=['librosa', 'torchaudio'],
     packages=find_packages(),
-    install_requires=['librosa', 'torchaudio'])
+    include_package_data=True)
