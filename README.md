@@ -28,6 +28,6 @@ The CREPE model is loaded once and automatically placed on the same device as  t
 
 ### Tasks
 
-- [] Viterbi decoding
-- [] DDSP embedding
-- [] Batch processing
+- [ ] Viterbi decoding
+- [ ] DDSP embedding
+- [ ] Batch processing
