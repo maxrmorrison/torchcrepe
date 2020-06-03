@@ -23,7 +23,7 @@ hop_length = int(sr / 100.)
 pitch, harmonicity = torchcrepe.predict(audio.squeeze(), sr, hop_length)
 ```
 
-The CREPE model is loaded once and automatically placed on the same device as  the model input (i.e., if `audio.device == cuda:#` then inference will occur  on device `cuda:#`).
+The CREPE model is loaded once and automatically placed on the same device as  the model input (i.e., if `audio.device == 'cuda:#'` then inference will occur  on device `'cuda:#'`).
 
 
 ### Tasks
