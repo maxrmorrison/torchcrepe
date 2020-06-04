@@ -39,7 +39,7 @@ class Crepe(nn.Module):
         self.conv6_BN = self.__batch_normalization(2, 'conv6-BN', num_features=64, eps=0.0010000000474974513, momentum=0.0)
         self.classifier = self.__dense(name = 'classifier', in_features = 256, out_features = 360, bias = True)
 
-    def forward(self, x):
+    def embed(self, x):
         input_reshape   = x[:, None, :, None]
         conv1_pad       = F.pad(input_reshape, (0, 0, 254, 254))
         conv1           = self.conv1(conv1_pad)
@@ -70,6 +70,13 @@ class Crepe(nn.Module):
         conv5_activation = F.relu(conv5)
         conv5_BN        = self.conv5_BN(conv5_activation)
         conv5_maxpool, conv5_maxpool_idx = F.max_pool2d(conv5_BN, kernel_size=(2, 1), stride=(2, 1), padding=0, ceil_mode=False, return_indices=True)
+        return conv5_maxpool
+        
+    def forward(self, x, embed=False):
+        conv5_maxpool = self.embed(x)
+        if embed:
+            return conv5_maxpool
+        
         conv5_dropout   = F.dropout(input = conv5_maxpool, p = 0.25, training = self.training, inplace = True)
         conv6_pad       = F.pad(conv5_dropout, (0, 0, 31, 32))
         conv6           = self.conv6(conv6_pad)

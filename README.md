@@ -1,5 +1,5 @@
 # torchcrepe
-Pytorch implementation of the CREPE pitch tracker. The original Tensorflow implementation can be found [here](https://github.com/marl/crepe/). The provided model weights were obtained by converting the "tiny" model using [MMdnn](https://github.com/microsoft/MMdnn), Microsoft's open-source model management framework.
+Pytorch implementation of the CREPE pitch tracker. The original Tensorflow implementation can be found [here](https://github.com/marl/crepe/). The provided model weights were obtained by converting the "tiny" model using [MMdnn](https://github.com/microsoft/MMdnn), an open-source model management framework.
 
 
 ### Installation
@@ -16,10 +16,13 @@ import torchcrepe
 # Load audio
 audio, sr = torchaudio.load( ... )
 
-# Here we use a 10 ms hop length
+# Place the audio on the device you want CREPE to run on
+audio = audio.to( ... )
+
+# Here we'll use a 10 ms hop length
 hop_length = int(sr / 100.)
 
-# Compute pitch and harmonicity using CREPE model
+# Compute pitch and harmonicity using CREPE
 pitch, harmonicity = torchcrepe.predict(audio.squeeze(), sr, hop_length)
 ```
 
@@ -29,5 +32,5 @@ The CREPE model is loaded once and automatically placed on the same device as  t
 ### Tasks
 
 - [ ] Viterbi decoding
-- [ ] DDSP embedding
-- [ ] Batch processing
+- [x] DDSP embedding
+- [x] Batch processing
