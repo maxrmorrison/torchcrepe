@@ -9,6 +9,8 @@ Clone this repo and run `pip install -e .` in the `torchcrepe` directory.
 
 ### Usage
 
+##### Computing pitch and harmonicity from audio
+
 ```
 import torchaudio
 import torchcrepe
@@ -23,14 +25,29 @@ audio = audio.to( ... )
 hop_length = int(sr / 100.)
 
 # Compute pitch and harmonicity using CREPE
-pitch, harmonicity = torchcrepe.predict(audio.squeeze(), sr, hop_length)
+pitch, harmonicity = torchcrepe.predict(audio, sr, hop_length)
 ```
 
-The CREPE model is loaded once and automatically placed on the same device as  the model input (i.e., if `audio.device == 'cuda:#'` then inference will occur  on device `'cuda:#'`).
+
+##### Computing the CREPE model output activations
+
+```
+probabilities = torchcrepe.infer(torchcrepe.preprocess(audio, sr, hop_length))
+```
+
+
+##### Computing the CREPE embedding space
+
+As in Differentiable Digital Signal Processing, this uses the output of the fifth max-pooling layer as a pretrained pitch embedding
+
+```
+embeddings = torchcrepe.embed(audio, sr, hop_length)
+```
 
 
 ### Tasks
 
+- [ ] Filtering (mean and median)
 - [ ] Viterbi decoding
 - [x] DDSP embedding
 - [x] Batch processing
