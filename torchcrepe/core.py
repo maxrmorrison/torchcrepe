@@ -10,6 +10,8 @@ from .model import Crepe
 
 __all__ = ['bins_to_cents',
            'bins_to_frequency',
+           'cents_to_bins',
+           'frequency_to_bins',
            'infer',
            'predict',
            'preprocess',
@@ -53,6 +55,10 @@ def predict(audio, sample_rate, hop_length, fmin=0., fmax=7180., viterbi=False):
             The sampling rate in Hz
         hop_length (int)
             The hop_length in samples
+        fmin (float)
+            The minimum allowable frequency in Hz
+        fmax (float)
+            The maximum allowable frequency in Hz
         viterbi (bool)
             Whether to use viterbi decoding
     
@@ -64,13 +70,13 @@ def predict(audio, sample_rate, hop_length, fmin=0., fmax=7180., viterbi=False):
     frames = preprocess(audio, sample_rate, hop_length)
     
     # Infer independent probabilities for each pitch bin
-    probs = infer(frames)
+    logits = infer(frames)
     
     # shape=(batch, 360, time / hop_length)
-    probs = probs.reshape(audio.size(0), -1, 360).transpose(1, 2)
+    logits = logits.reshape(audio.size(0), -1, 360).transpose(1, 2)
     
     # Convert probabilities to F0 and harmonicity
-    return postprocess(probs, viterbi)
+    return postprocess(logits, fmin, fmax, viterbi)
 
 
 ###############################################################################
@@ -85,7 +91,7 @@ def infer(batch, embed=False):
         frames (torch.tensor [shape=(batch * time / hop_length, 1024)])
     
     Returns 
-        probabilities (torch.tensor [shape=(batch * time / hop_length, 360)])
+        logits (torch.tensor [shape=(batch * time / hop_length, 360)])
     """
     # Load the model if necessary
     if not hasattr(infer, 'model'):
@@ -99,12 +105,16 @@ def infer(batch, embed=False):
     return infer.model(batch, embed=embed)
 
 
-def postprocess(probs, viterbi=False):
+def postprocess(logits, fmin=0., fmax=2006., viterbi=False):
     """Convert model output to F0 and harmonicity
     
     Arguments
-        probs (torch.tensor [shape=(batch, 360, time / hop_length)])
-            The probabilities for each pitch bin inferred by the network
+        logits (torch.tensor [shape=(batch, 360, time / hop_length)])
+            The logits for each pitch bin inferred by the network
+        fmin (float)
+            The minimum allowable frequency in Hz
+        fmax (float)
+            The maximum allowable frequency in Hz
         viterbi (bool)
             Whether to use viterbi decoding
             
@@ -113,13 +123,24 @@ def postprocess(probs, viterbi=False):
         harmonicity (torch.tensor [shape=(batch, time / hop_length)])
     """
     # Sampling is non-differentiable, so remove from graph
-    probs = probs.detach()
+    logits = logits.detach()
     
-    # Use maximum probability over pitch bins as harmonicity
+    # Convert frequency range to pitch bin range
+    minidx = frequency_to_bins(torch.tensor(fmin))
+    maxidx = frequency_to_bins(torch.tensor(fmax), torch.ceil)
+    
+    # Remove frequencies outside of allowable range
+    logits[:, :minidx] = -float('inf')
+    logits[:, maxidx:] = -float('inf')
+    
+    # Normalize logits
+    probs = torch.sigmoid(logits)
+    
+    # Use maximum logit over pitch bins as harmonicity
     harmonicity = probs.max(dim=1).values
     
     # Perform argmax or viterbi sampling
-    bins = viterbi_decode(probs) if viterbi else probs.argmax(dim=1)
+    bins = viterbi_decode(logits) if viterbi else logits.argmax(dim=1)
         
     # Convert to frequencies in Hz
     return bins_to_frequency(bins), harmonicity
@@ -178,7 +199,17 @@ def bins_to_frequency(bins):
     return 10 * 2 ** (bins_to_cents(bins) / 1200)
 
 
-def viterbi_decode(probs):
+def cents_to_bins(cents, quantize_fn=torch.floor):
+    """Converts cents to pitch bins"""
+    return quantize_fn((cents - 1997.3794084376191) / 20.).int()
+
+
+def frequency_to_bins(frequency, quantize_fn=torch.floor):
+    """Convert frequency value to pitch bins"""
+    return cents_to_bins(1200 * torch.log2(frequency / 10.), quantize_fn)
+
+
+def viterbi_decode(logits):
     """Sample observations using viterbi decoding"""
     # Create viterbi transition matrix
     if not hasattr(viterbi_decode, 'transition'):
@@ -187,17 +218,17 @@ def viterbi_decode(probs):
         transition = transition / transition.sum(axis=1, keepdims=True)
         viterbi_decode.transition = transition
     
-    # Normalize probabilities
+    # Normalize logits
     with torch.no_grad():
-        posterior = torch.nn.functional.softmax(probs, dim=0)
-    
+        probs = torch.nn.functional.softmax(logits, dim=1)
+        
     # Convert to numpy
-    posterior = posterior.cpu().numpy()
+    sequences = probs.cpu().numpy()
     
     # Perform viterbi decoding
-    # TODO - this is currently producing all zeros on speech commands data
-    observations = librosa.sequence.viterbi(
-        posterior, viterbi_decode.transition)
+    observations = [
+        librosa.sequence.viterbi(sequence, viterbi_decode.transition)
+        for sequence in sequences]
     
     # Convert to pytorch
     return torch.tensor(observations, device=probs.device)
