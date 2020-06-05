@@ -65,13 +65,13 @@ your data, if used at all. 10-20 millisecond windows have worked for speech.
 
 ```
 # Median filter noisy confidence value
-harmonicity = torchcrepe.filters.median(harmonicity, window_size)
+harmonicity = torchcrepe.filter.median(harmonicity, window_size)
 
 # Remove inharmonic regions
 pitch = torchcrepe.threshold(pitch, harmonicity, threshold)
 
 # Optionally smooth pitch to remove quantization artifacts
-pitch = torchcrepe.filters.mean(pitch, window_size)
+pitch = torchcrepe.filter.mean(pitch, window_size)
 ```
 
 
