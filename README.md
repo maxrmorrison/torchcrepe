@@ -40,7 +40,7 @@ pitch, harmonicity = torchcrepe.predict(audio, sr, hop_length, fmin, fmax)
 
 By default, `torchcrepe` uses Viterbi decoding on the softmax of the network
 logits. This is different than the original implementation, which uses a
-weighted average near the argmax probability. We find that the argmax operation
+weighted average near the argmax probability. The argmax operation
 can cause double/half frequency errors that are removed by penalizing large
 pitch jumps via Viterbi decoding. The `decode` submodule provides some options
 for decoding.
