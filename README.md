@@ -26,7 +26,7 @@ audio, sr = torchaudio.load( ... )
 # Place the audio on the device you want CREPE to run on
 audio = audio.to( ... )
 
-# Here we'll use a 5 ms hop length
+# Here we'll use a 5 millisecond hop length
 hop_length = int(sr / 200.)
 
 # Provide a sensible frequency range for your domain (upper limit is 2006 Hz)
@@ -61,17 +61,20 @@ makes sense to mask these less reliable pitch values. However, the harmonicity
 can be noisy and the pitch has quantization artifacts. `torchcrepe` provides a
 `filters` submodule for this. The window sizes of the filters and harmonicity 
 threshold should be tuned to your data. For clean speech, a
-10-20 millisecond window has worked.
+10-20 millisecond window with a threshold of 0.23 has worked.
 
 ```
+# Here we'll use a 15 millisecond window
+win_length = 3 * hop_length
+
 # Median filter noisy confidence value
-harmonicity = torchcrepe.filter.median(harmonicity, window_size)
+harmonicity = torchcrepe.filter.median(harmonicity, win_length)
 
 # Remove inharmonic regions
-pitch = torchcrepe.threshold(pitch, harmonicity, threshold)
+pitch = torchcrepe.threshold(pitch, harmonicity, 0.23)
 
 # Optionally smooth pitch to remove quantization artifacts
-pitch = torchcrepe.filter.mean(pitch, window_size)
+pitch = torchcrepe.filter.mean(pitch, win_length)
 ```
 
 
