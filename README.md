@@ -8,7 +8,7 @@ framework.
 
 ### Installation
 
-Clone this repo and run `pip install -e .` in the `torchcrepe` directory.
+Clone this repo and run `pip install .` in the `torchcrepe` directory.
 
 
 ### Usage
