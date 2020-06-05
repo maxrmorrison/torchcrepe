@@ -34,7 +34,7 @@ hop_length = int(sr / 200.)
 fmin = 50
 fmax = 550
 
-# Compute pitch and harmonicity using viterbi decoding from CREPE logits
+# Compute pitch and harmonicity
 pitch, harmonicity = torchcrepe.predict(audio, sr, hop_length, fmin, fmax)
 ```
 
