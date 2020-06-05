@@ -140,17 +140,11 @@ def postprocess(logits, fmin=0., fmax=2006., decoder=decode.viterbi):
     logits[:, :minidx] = -float('inf')
     logits[:, maxidx:] = -float('inf')
     
-    # Normalize logits
-    probs = torch.sigmoid(logits)
-    
-    # Use maximum logit over pitch bins as harmonicity
-    harmonicity = probs.max(dim=1).values
-    
     # Perform argmax or viterbi sampling
-    pitch = decoder(logits)
-        
-    # Convert to frequencies in Hz
-    return pitch, harmonicity
+    bins, pitch = decoder(logits)
+    
+    # Compute harmonicity from logits and decoded pitch bins
+    return pitch, harmonicity(logits, bins)
         
     
 def preprocess(audio, sample_rate, hop_length):
@@ -196,6 +190,24 @@ def preprocess(audio, sample_rate, hop_length):
 ###############################################################################
 
 
+def harmonicity(logits, bins):
+    """Computes the harmonicity from the network output and pitch bins"""
+    # Normalize logits
+    probs = torch.sigmoid(logits)
+    
+    # shape=(batch * time / hop_length, 360)
+    probs_stacked = probs.transpose(1, 2).reshape(-1, 360)
+    
+    # shape=(batch * time / hop_length,, 1)
+    bins_stacked = bins.reshape(-1, 1)
+    
+    # Use maximum logit over pitch bins as harmonicity
+    harmonicity = probs_stacked.gather(1, bins_stacked)
+    
+    # shape=(batch, time / hop_length)
+    return harmonicity.reshape(probs.size(0), probs.size(2))
+    
+    
 def threshold(pitch, harmonicity, value):
     """Mask inharmonic pitch values with nans
     

@@ -12,27 +12,24 @@ from . import convert
 
 def argmax(logits):
     """Sample observations by taking the argmax"""
-    return convert.bins_to_frequency(logits.argmax(dim=1))
+    bins = logits.argmax(dim=1)
+    return bins, convert.bins_to_frequency(bins)
 
 
 def weighted_argmax(logits):
     """Sample observations using weighted sum near the argmax"""
-    # Convert to probabilities
-    with torch.no_grad():
-        probs = torch.sigmoid(logits)
-    
     # Find center of analysis window
-    center = torch.argmax(probs, dim=1)
+    bins = logits.argmax(dim=1)
     
     # Find bounds of analysis window
-    start = torch.max(torch.tensor(0), center - 4)
-    end = torch.min(torch.tensor(probs.size(2)), center + 5)
+    start = torch.max(torch.tensor(0), bins - 4)
+    end = torch.min(torch.tensor(logits.size(2)), bins + 5)
     
     # Mask out everything outside of window
-    for batch in range(probs.size(0)):
-        for time in range(probs.size(2)):
-            probs[batch, :start[batch, time], time] = 0.
-            probs[batch, end[batch, time]:, time] = 0.
+    for batch in range(logits.size(0)):
+        for time in range(logits.size(2)):
+            logits[batch, :start[batch, time], time] = -float('inf')
+            logits[batch, end[batch, time]:, time] = -float('inf')
 
     # Construct weights
     if not hasattr(weighted_argmax, 'weights'):
@@ -40,13 +37,17 @@ def weighted_argmax(logits):
         weighted_argmax.weights = weights[None, :, None]
     
     # Ensure devices are the same (no-op if they are)
-    weighted_argmax.weights = weighted_argmax.weights.to(probs.device)
+    weighted_argmax.weights = weighted_argmax.weights.to(logits.device)
+    
+    # Convert to probabilities
+    with torch.no_grad():
+        probs = torch.sigmoid(logits)
     
     # Apply weights
     cents = (weighted_argmax.weights * probs).sum(dim=1) / probs.sum(dim=1)
     
     # Convert to frequency in Hz
-    return convert.cents_to_frequency(cents)
+    return bins, convert.cents_to_frequency(cents)
 
 
 def viterbi(logits):
@@ -73,4 +74,4 @@ def viterbi(logits):
     bins = torch.tensor(bins, device=probs.device)
     
     # Convert to frequency in Hz
-    return convert.bins_to_frequency(bins)
+    return bins, convert.bins_to_frequency(bins)
