@@ -11,7 +11,6 @@ class Crepe(nn.Module):
     def __init__(self, weight_file):
         super().__init__()
         # Load weights
-        # If this fails, add encoding='bytes'
         self.weights = np.load(weight_file, allow_pickle=True).item()
 
         # Model definition
