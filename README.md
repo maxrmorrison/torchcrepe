@@ -64,8 +64,8 @@ threshold should be tuned to your data. For clean speech, a
 10-20 millisecond window with a threshold of 0.23 has worked.
 
 ```
-# Here we'll use a 15 millisecond window
-win_length = 3 * hop_length
+# We'll use a 15 millisecond window assuming a hop length of 5 milliseconds
+win_length = 3
 
 # Median filter noisy confidence value
 harmonicity = torchcrepe.filter.median(harmonicity, win_length)
