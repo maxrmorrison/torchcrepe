@@ -60,7 +60,7 @@ When harmonicity is low, the pitch is less reliable. For some problems, it
 makes sense to mask these less reliable pitch values. However, the harmonicity
 can be noisy and the pitch has quantization artifacts. `torchcrepe` provides a
 `filters` submodule for this. The window sizes of the filters and harmonicity 
-threshold should be tuned to your data, if used at all. For clean speech, a
+threshold should be tuned to your data. For clean speech, a
 10-20 millisecond window has worked.
 
 ```
