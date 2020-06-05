@@ -37,24 +37,6 @@ def median(signals, win_length):
     return nanfilter(signals, win_length, nanmedian)
 
 
-def threshold(pitch, harmonicity, value):
-    """Mask inharmonic pitch values with nans
-    
-    Arguments
-        pitch (torch.tensor [shape=(batch, time)])
-            The pitch contours
-        harmonicity (torch.tensor [shape=(batch, time)])
-            The harmonicity confidence values
-        value (float)
-            The threshold value
-    
-    Returns
-        thresholded (torch.tensor [shape=(batch, time)])
-    """
-    pitch[harmonicity < value] = np.nan
-    return pitch
-
-
 ###############################################################################
 # Utilities
 ###############################################################################

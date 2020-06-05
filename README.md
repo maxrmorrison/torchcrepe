@@ -35,20 +35,32 @@ fmin = 50
 fmax = 550
 
 # Compute pitch and harmonicity using viterbi decoding from CREPE logits
-pitch, harmonicity = torchcrepe.predict(audio,
-                                        sr,
-                                        hop_length,
-                                        fmin,
-                                        fmax,
-                                        viterbi=True)
+pitch, harmonicity = torchcrepe.predict(audio, sr, hop_length, fmin, fmax)
+```
+
+By default, `torchcrepe` uses Viterbi decoding on the softmax of the network
+logits. This is different than the original implementation, which uses a
+weighted average near the argmax probability. We find that the argmax operation
+can cause double/half frequency errors that are removed by penalizing large
+pitch jumps via Viterbi decoding. The `decode` submodule provides some options
+for decoding.
+
+```
+# Decode using viterbi decoding (default)
+torchcrepe.predict(..., decoder=torchcrepe.decode.viterbi)
+
+# Decode using weighted argmax (as in the original implementation)
+torchcrepe.predict(..., decoder=torchcrepe.decode.weighted_argmax)
+
+# Decode using argmax
+torchcrepe.predict(..., decoder=torchcrepe.decode.argmax)
 ```
 
 When harmonicity is low, the pitch is less reliable. For some problems, it
 makes sense to mask these less reliable pitch values. However, the pitch and
-harmonicity can be noisy. `torchcrepe` provides a `filters` module for this.
+harmonicity can be noisy. `torchcrepe` provides a `filters` submodule for this.
 The window sizes of the filters and harmonicity threshold should be tuned to
-your data, if used at all. I have found 10-20 millisecond windows works well
-for speech.
+your data, if used at all. 10-20 millisecond windows have worked for speech.
 
 
 ```
@@ -56,7 +68,7 @@ for speech.
 harmonicity = torchcrepe.filters.median(harmonicity, window_size)
 
 # Remove inharmonic regions
-pitch = torchcrepe.filters.threshold(pitch, harmonicity, threshold)
+pitch = torchcrepe.threshold(pitch, harmonicity, threshold)
 
 # Optionally smooth pitch to remove quantization artifacts
 pitch = torchcrepe.filters.mean(pitch, window_size)

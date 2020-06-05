@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torchaudio
 
+from . import decode
 from .model import Crepe
 
 
@@ -16,7 +17,7 @@ __all__ = ['bins_to_cents',
            'predict',
            'preprocess',
            'postprocess',
-           'viterbi_decode']
+           'threshold']
 
 
 ###############################################################################
@@ -45,7 +46,12 @@ def embed(audio, sample_rate, hop_length):
     return infer(frames, embed=true)
 
 
-def predict(audio, sample_rate, hop_length, fmin=0., fmax=7180., viterbi=False):
+def predict(audio,
+            sample_rate,
+            hop_length,
+            fmin=0.,
+            fmax=7180.,
+            decoder=decode.viterbi):
     """Performs pitch estimation
     
     Arguments
@@ -59,8 +65,8 @@ def predict(audio, sample_rate, hop_length, fmin=0., fmax=7180., viterbi=False):
             The minimum allowable frequency in Hz
         fmax (float)
             The maximum allowable frequency in Hz
-        viterbi (bool)
-            Whether to use viterbi decoding
+        decoder (function)
+            The decoder to use. See decode.py for decoders.
     
     Returns
         pitch (torch.tensor [shape=(batch, time / hop_length)])
@@ -76,7 +82,7 @@ def predict(audio, sample_rate, hop_length, fmin=0., fmax=7180., viterbi=False):
     logits = logits.reshape(audio.size(0), -1, 360).transpose(1, 2)
     
     # Convert probabilities to F0 and harmonicity
-    return postprocess(logits, fmin, fmax, viterbi)
+    return postprocess(logits, fmin, fmax, decoder)
 
 
 ###############################################################################
@@ -105,7 +111,7 @@ def infer(batch, embed=False):
     return infer.model(batch, embed=embed)
 
 
-def postprocess(logits, fmin=0., fmax=2006., viterbi=False):
+def postprocess(logits, fmin=0., fmax=2006., decoder=decode.viterbi):
     """Convert model output to F0 and harmonicity
     
     Arguments
@@ -140,10 +146,10 @@ def postprocess(logits, fmin=0., fmax=2006., viterbi=False):
     harmonicity = probs.max(dim=1).values
     
     # Perform argmax or viterbi sampling
-    bins = viterbi_decode(logits) if viterbi else logits.argmax(dim=1)
+    pitch = decoder(logits)
         
     # Convert to frequencies in Hz
-    return bins_to_frequency(bins), harmonicity
+    return pitch, harmonicity
         
     
 def preprocess(audio, sample_rate, hop_length):
@@ -196,7 +202,7 @@ def bins_to_cents(bins):
 
 def bins_to_frequency(bins):
     """Converts pitch bins to frequency in Hz"""
-    return 10 * 2 ** (bins_to_cents(bins) / 1200)
+    return cents_to_frequency(bins_to_cents(bins))
 
 
 def cents_to_bins(cents, quantize_fn=torch.floor):
@@ -204,31 +210,34 @@ def cents_to_bins(cents, quantize_fn=torch.floor):
     return quantize_fn((cents - 1997.3794084376191) / 20.).int()
 
 
+def cents_to_frequency(cents):
+    """Converts cents to frequency in Hz"""
+    return 10 * 2 ** (cents / 1200)
+
+
 def frequency_to_bins(frequency, quantize_fn=torch.floor):
-    """Convert frequency value to pitch bins"""
-    return cents_to_bins(1200 * torch.log2(frequency / 10.), quantize_fn)
+    """Convert frequency in Hz to pitch bins"""
+    return cents_to_bins(frequency_to_cents(frequency), quantize_fn)
 
 
-def viterbi_decode(logits):
-    """Sample observations using viterbi decoding"""
-    # Create viterbi transition matrix
-    if not hasattr(viterbi_decode, 'transition'):
-        xx, yy = np.meshgrid(range(360), range(360))
-        transition = np.maximum(12 - abs(xx - yy), 0)
-        transition = transition / transition.sum(axis=1, keepdims=True)
-        viterbi_decode.transition = transition
+def frequency_to_cents(frequency):
+    """Convert frequency in Hz to cents"""
+    return 1200 * torch.log2(frequency / 10.)
+
+
+def threshold(pitch, harmonicity, value):
+    """Mask inharmonic pitch values with nans
     
-    # Normalize logits
-    with torch.no_grad():
-        probs = torch.nn.functional.softmax(logits, dim=1)
-        
-    # Convert to numpy
-    sequences = probs.cpu().numpy()
+    Arguments
+        pitch (torch.tensor [shape=(batch, time)])
+            The pitch contours
+        harmonicity (torch.tensor [shape=(batch, time)])
+            The harmonicity confidence values
+        value (float)
+            The threshold value
     
-    # Perform viterbi decoding
-    observations = [
-        librosa.sequence.viterbi(sequence, viterbi_decode.transition)
-        for sequence in sequences]
-    
-    # Convert to pytorch
-    return torch.tensor(observations, device=probs.device)
+    Returns
+        thresholded (torch.tensor [shape=(batch, time)])
+    """
+    pitch[harmonicity < value] = np.nan
+    return pitch
