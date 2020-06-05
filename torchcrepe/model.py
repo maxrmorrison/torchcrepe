@@ -10,6 +10,7 @@ class Crepe(nn.Module):
     
     def __init__(self, weight_file):
         super().__init__()
+        
         # Load weights
         self.weights = np.load(weight_file, allow_pickle=True).item()
 
