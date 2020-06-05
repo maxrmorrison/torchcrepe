@@ -5,14 +5,12 @@ import numpy as np
 import torch
 import torchaudio
 
+from . import convert
 from . import decode
 from .model import Crepe
 
 
-__all__ = ['bins_to_cents',
-           'bins_to_frequency',
-           'cents_to_bins',
-           'frequency_to_bins',
+__all__ = ['embed',
            'infer',
            'predict',
            'preprocess',
@@ -37,13 +35,16 @@ def embed(audio, sample_rate, hop_length):
             The hop_length in samples
             
     Returns
-        embedding (torch.tensor [shape=(batch, channels, time / hop_length)])
+        embedding (torch.tensor [shape=(batch, time / hop_length, 32, 8)])
     """
     # Preprocess audio
     frames = preprocess(audio, sample_rate, hop_length)
     
     # Infer pitch embeddings
-    return infer(frames, embed=true)
+    embeddings = infer(frames, embed=True)
+    
+    # shape=(batch, time / hop_length, 32, 8)
+    return embeddings.reshape(audio.size(0), -1, 32, 8)
 
 
 def predict(audio,
@@ -132,8 +133,8 @@ def postprocess(logits, fmin=0., fmax=2006., decoder=decode.viterbi):
     logits = logits.detach()
     
     # Convert frequency range to pitch bin range
-    minidx = frequency_to_bins(torch.tensor(fmin))
-    maxidx = frequency_to_bins(torch.tensor(fmax), torch.ceil)
+    minidx = convert.frequency_to_bins(torch.tensor(fmin))
+    maxidx = convert.frequency_to_bins(torch.tensor(fmax), torch.ceil)
     
     # Remove frequencies outside of allowable range
     logits[:, :minidx] = -float('inf')
@@ -193,36 +194,6 @@ def preprocess(audio, sample_rate, hop_length):
 ###############################################################################
 # Utilities
 ###############################################################################
-
-
-def bins_to_cents(bins):
-    """Converts pitch bins to cents"""
-    return 20. * bins + 1997.3794084376191
-
-
-def bins_to_frequency(bins):
-    """Converts pitch bins to frequency in Hz"""
-    return cents_to_frequency(bins_to_cents(bins))
-
-
-def cents_to_bins(cents, quantize_fn=torch.floor):
-    """Converts cents to pitch bins"""
-    return quantize_fn((cents - 1997.3794084376191) / 20.).int()
-
-
-def cents_to_frequency(cents):
-    """Converts cents to frequency in Hz"""
-    return 10 * 2 ** (cents / 1200)
-
-
-def frequency_to_bins(frequency, quantize_fn=torch.floor):
-    """Convert frequency in Hz to pitch bins"""
-    return cents_to_bins(frequency_to_cents(frequency), quantize_fn)
-
-
-def frequency_to_cents(frequency):
-    """Convert frequency in Hz to cents"""
-    return 1200 * torch.log2(frequency / 10.)
 
 
 def threshold(pitch, harmonicity, value):

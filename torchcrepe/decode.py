@@ -2,7 +2,7 @@ import librosa
 import numpy as np
 import torch
 
-from .core import bins_to_cents, bins_to_frequency, cents_to_frequency
+from . import convert
 
 
 ###############################################################################
@@ -12,7 +12,7 @@ from .core import bins_to_cents, bins_to_frequency, cents_to_frequency
 
 def argmax(logits):
     """Sample observations by taking the argmax"""
-    return bins_to_frequency(logits.argmax(dim=1))
+    return convert.bins_to_frequency(logits.argmax(dim=1))
 
 
 def weighted_argmax(logits):
@@ -36,7 +36,7 @@ def weighted_argmax(logits):
 
     # Construct weights
     if not hasattr(weighted_argmax, 'weights'):
-        weights = bins_to_cents(torch.arange(360))
+        weights = convert.bins_to_cents(torch.arange(360))
         weighted_argmax.weights = weights[None, :, None]
     
     # Ensure devices are the same (no-op if they are)
@@ -46,7 +46,7 @@ def weighted_argmax(logits):
     cents = (weighted_argmax.weights * probs).sum(dim=1) / probs.sum(dim=1)
     
     # Convert to frequency in Hz
-    return cents_to_frequency(cents)
+    return convert.cents_to_frequency(cents)
 
 
 def viterbi(logits):
@@ -73,4 +73,4 @@ def viterbi(logits):
     bins = torch.tensor(bins, device=probs.device)
     
     # Convert to frequency in Hz
-    return bins_to_frequency(bins)
+    return convert.bins_to_frequency(bins)
