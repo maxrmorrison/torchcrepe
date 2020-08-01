@@ -2,7 +2,7 @@ import librosa
 import numpy as np
 import torch
 
-from . import convert
+import torchcrepe
 
 
 ###############################################################################
@@ -13,14 +13,16 @@ from . import convert
 def argmax(logits):
     """Sample observations by taking the argmax"""
     bins = logits.argmax(dim=1)
-    return bins, convert.bins_to_frequency(bins)
+
+    # Convert to frequency in Hz
+    return bins, torchcrepe.convert.bins_to_frequency(bins)
 
 
 def weighted_argmax(logits):
     """Sample observations using weighted sum near the argmax"""
     # Find center of analysis window
     bins = logits.argmax(dim=1)
-    
+
     # Find bounds of analysis window
     start = torch.max(torch.tensor(0), bins - 4)
     end = torch.min(torch.tensor(logits.size(2)), bins + 5)
@@ -33,7 +35,7 @@ def weighted_argmax(logits):
 
     # Construct weights
     if not hasattr(weighted_argmax, 'weights'):
-        weights = convert.bins_to_cents(torch.arange(360))
+        weights = torchcrepe.convert.bins_to_cents(torch.arange(360))
         weighted_argmax.weights = weights[None, :, None]
     
     # Ensure devices are the same (no-op if they are)
@@ -47,7 +49,7 @@ def weighted_argmax(logits):
     cents = (weighted_argmax.weights * probs).sum(dim=1) / probs.sum(dim=1)
     
     # Convert to frequency in Hz
-    return bins, convert.cents_to_frequency(cents)
+    return bins, torchcrepe.convert.cents_to_frequency(cents)
 
 
 def viterbi(logits):
@@ -68,10 +70,10 @@ def viterbi(logits):
     
     # Perform viterbi decoding
     bins = [librosa.sequence.viterbi(sequence, viterbi.transition)
-                    for sequence in sequences]
+            for sequence in sequences]
     
     # Convert to pytorch
     bins = torch.tensor(bins, device=probs.device)
-    
+
     # Convert to frequency in Hz
-    return bins, convert.bins_to_frequency(bins)
+    return bins, torchcrepe.convert.bins_to_frequency(bins)

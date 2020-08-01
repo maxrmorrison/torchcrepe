@@ -8,6 +8,6 @@ setup(
     author='Max Morrison',
     author_email='maxrmorrison@gmail.com',
     url='https://github.com/maxrmorrison/torchcrepe',
-    install_requires=['librosa', 'torchaudio'],
+    install_requires=['librosa', 'resampy', 'scipy', 'torchaudio'],
     packages=find_packages(),
     include_package_data=True)

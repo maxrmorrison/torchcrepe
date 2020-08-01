@@ -1,66 +1,87 @@
+import functools
+import os
+
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
+import torchcrepe
 
-class Crepe(nn.Module):
+
+###########################################################################
+# Model definition
+###########################################################################
+
+
+class Crepe(torch.nn.Module):
     """Crepe model definition"""
     
-    def __init__(self, weight_file):
+    def __init__(self, model='full'):
         super().__init__()
         
-        # Load weights
-        self.weights = np.load(weight_file, allow_pickle=True).item()
+        if model == 'full':
+            in_channels = [1, 1024, 128, 128, 128, 256]
+            out_channels = [1024, 128, 128, 128, 256, 512]
+            self.in_features = 2048
+        elif model == 'tiny':
+            in_channels = [1, 128, 16, 16, 16, 32]
+            out_channels = [128, 16, 16, 16, 32, 64]
+            self.in_features = 256
+        else:
+            raise ValueError(f'Model {f} is not supported')
+        
+        # Overload with eps and momentum conversion given by MMdnn
+        batch_norm_fn = functools.partial(torch.nn.BatchNorm2d,
+                                          eps=0.0010000000474974513,
+                                          momentum=0.0)
 
-        # Model definition
-        self.conv1 = self.conv(
-            name='conv1',
-            in_channels=1,
-            out_channels=128,
+        # Layer definitions
+        self.conv1 = torch.nn.Conv2d(
+            in_channels=in_channels[0],
+            out_channels=out_channels[0],
             kernel_size=(512, 1),
             stride=(4, 1))
-        self.conv1_BN = self.batch_normalization('conv1-BN', num_features=128)
+        self.conv1_BN = batch_norm_fn(
+            num_features=out_channels[0])
         
-        self.conv2 = self.conv(
-            name='conv2',
-            in_channels=128,
-            out_channels=16,
+        self.conv2 = torch.nn.Conv2d(
+            in_channels=in_channels[1],
+            out_channels=out_channels[1],
             kernel_size=(64, 1))
-        self.conv2_BN = self.batch_normalization('conv2-BN', num_features=16)
+        self.conv2_BN = batch_norm_fn(
+            num_features=out_channels[1])
         
-        self.conv3 = self.conv(
-            name='conv3',
-            in_channels=16,
-            out_channels=16,
+        self.conv3 = torch.nn.Conv2d(
+            in_channels=in_channels[2],
+            out_channels=out_channels[2],
             kernel_size=(64, 1))
-        self.conv3_BN = self.batch_normalization('conv3-BN', num_features=16)
+        self.conv3_BN = batch_norm_fn(
+            num_features=out_channels[2])
         
-        self.conv4 = self.conv(
-            name='conv4',
-            in_channels=16,
-            out_channels=16,
+        self.conv4 = torch.nn.Conv2d(
+            in_channels=in_channels[3],
+            out_channels=out_channels[3],
             kernel_size=(64, 1))
-        self.conv4_BN = self.batch_normalization('conv4-BN', num_features=16)
+        self.conv4_BN = batch_norm_fn(
+            num_features=out_channels[3])
         
-        self.conv5 = self.conv(
-            name='conv5',
-            in_channels=16,
-            out_channels=32,
+        self.conv5 = torch.nn.Conv2d(
+            in_channels=in_channels[4],
+            out_channels=out_channels[4],
             kernel_size=(64, 1))
-        self.conv5_BN = self.batch_normalization('conv5-BN', num_features=32)
+        self.conv5_BN = batch_norm_fn(
+            num_features=out_channels[4])
         
-        self.conv6 = self.conv(
-            name='conv6',
-            in_channels=32,
-            out_channels=64,
+        self.conv6 = torch.nn.Conv2d(
+            in_channels=in_channels[5],
+            out_channels=out_channels[5],
             kernel_size=(64, 1))
-        self.conv6_BN = self.batch_normalization('conv6-BN', num_features=64)
+        self.conv6_BN = batch_norm_fn(
+            num_features=out_channels[5])
         
-        self.classifier = self.dense(
-            name='classifier',
-            in_features=256,
-            out_features=360)
+        self.classifier = torch.nn.Linear(
+            in_features=self.in_features,
+            out_features=torchcrepe.PITCH_BINS)
         
     def forward(self, x, embed=False):
         # Forward pass through first four layers and part of layer five
@@ -69,15 +90,15 @@ class Crepe(nn.Module):
         if embed:
             return x
         
-        # Finish layer five
-        x = F.dropout(x, p=0.25, training=self.training, inplace=True)
-        
         # Forward pass through layer six
         x = self.layer(x, self.conv6, self.conv6_BN)
         
+        # shape=(batch, -1)
+        x = x.permute(0, 2, 1, 3).reshape(-1, self.in_features)
+        
         # Compute logits
-        return self.classifier(x.reshape(-1, 256))
-
+        return torch.sigmoid(self.classifier(x))
+    
     ###########################################################################
     # Forward pass utilities
     ###########################################################################
@@ -94,64 +115,12 @@ class Crepe(nn.Module):
         x = self.layer(x, self.conv4, self.conv4_BN)
         
         # Partial forward pass through layer five
-        return self.layer_no_dropout(x, self.conv5, self.conv5_BN)
+        return self.layer(x, self.conv5, self.conv5_BN)
     
     def layer(self, x, conv, batch_norm, padding=(0, 0, 31, 32)):
         """Forward pass through one layer"""
-        x = self.layer_no_dropout(x, conv, batch_norm, padding)
-        return F.dropout(x, 0.25, self.training, inplace=True)
-    
-    def layer_no_dropout(self, x, conv, batch_norm, padding=(0, 0, 31, 32)):
-        """Forward pass through one layer, without final dropout layer"""
         x = F.pad(x, padding)
         x = conv(x)
         x = F.relu(x)
         x = batch_norm(x)
-        return F.max_pool2d(x, (2, 1), (2, 1))    
-    
-    ###########################################################################
-    # Network construction (mostly autogenerated code by MMdnn)
-    ###########################################################################
-    
-    def batch_normalization(self, name, **kwargs):
-        """Create batch norm layer and load weights"""
-        layer = nn.BatchNorm2d(
-            **kwargs, eps=0.0010000000474974513, momentum=0.0)
-
-        if 'scale' in self.weights[name]:
-            layer.state_dict()['weight'].copy_(
-                torch.from_numpy(self.weights[name]['scale']))
-        else:
-            layer.weight.data.fill_(1)
-
-        if 'bias' in self.weights[name]:
-            layer.state_dict()['bias'].copy_(
-                torch.from_numpy(self.weights[name]['bias']))
-        else:
-            layer.bias.data.fill_(0)
-
-        layer.state_dict()['running_mean'].copy_(
-            torch.from_numpy(self.weights[name]['mean']))
-        layer.state_dict()['running_var'].copy_(
-            torch.from_numpy(self.weights[name]['var']))
-        return layer
-
-    def conv(self, name, **kwargs):
-        """Create conv layer and load weights"""
-        layer = nn.Conv2d(**kwargs)
-        layer.state_dict()['weight'].copy_(
-            torch.from_numpy(self.weights[name]['weights']))
-        if 'bias' in self.weights[name]:
-            layer.state_dict()['bias'].copy_(
-                torch.from_numpy(self.weights[name]['bias']))
-        return layer
-
-    def dense(self, name, **kwargs):
-        """Create dense layer and load weights"""
-        layer = nn.Linear(**kwargs)
-        layer.state_dict()['weight'].copy_(
-            torch.from_numpy(self.weights[name]['weights']))
-        if 'bias' in self.weights[name]:
-            layer.state_dict()['bias'].copy_(
-                torch.from_numpy(self.weights[name]['bias']))
-        return layer
+        return F.max_pool2d(x, (2, 1), (2, 1))
