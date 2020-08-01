@@ -104,3 +104,13 @@ fifth max-pooling layer as a pretrained pitch embedding
 ```
 embeddings = torchcrepe.embed(audio, sr, hop_length)
 ```
+
+
+### Tests
+
+The module tests can be run as follows.
+
+```
+pip install pytest
+pytest
+```
