@@ -1,9 +1,9 @@
 # torchcrepe
 Pytorch implementation of the CREPE pitch tracker. The original Tensorflow
 implementation can be found [here](https://github.com/marl/crepe/). The
-provided model weights were obtained by converting the "tiny" model using
-[MMdnn](https://github.com/microsoft/MMdnn), an open-source model management
-framework.
+provided model weights were obtained by converting the "tiny" and "full" models
+using [MMdnn](https://github.com/microsoft/MMdnn), an open-source model
+management framework.
 
 
 ### Installation
@@ -34,16 +34,22 @@ hop_length = int(sr / 200.)
 fmin = 50
 fmax = 550
 
+# Select a model capacity--one of "tiny" or "full"
+model = 'tiny'
+
 # Compute pitch and harmonicity
-pitch, harmonicity = torchcrepe.predict(audio, sr, hop_length, fmin, fmax)
+pitch = torchcrepe.predict(audio, sr, hop_length, fmin, fmax, model)
 ```
 
+A harmonicity metric similar to the Crepe confidence score can also be
+extracted by passing `return_harmonicity=True` to `torchcrepe.predict`.
+
 By default, `torchcrepe` uses Viterbi decoding on the softmax of the network
-logits. This is different than the original implementation, which uses a
-weighted average near the argmax of cross-entropy probabilities. The argmax
-operation can cause double/half frequency errors that are removed by
-penalizing large pitch jumps via Viterbi decoding. The `decode` submodule
-provides some options for decoding.
+output. This is different than the original implementation, which uses a
+weighted average near the argmax of binary cross-entropy probabilities.
+The argmax operation can cause double/half frequency errors. These can be
+removed by penalizing large pitch jumps via Viterbi decoding. The `decode`
+submodule provides some options for decoding.
 
 ```
 # Decode using viterbi decoding (default)
@@ -58,10 +64,10 @@ torchcrepe.predict(..., decoder=torchcrepe.decode.argmax)
 
 When harmonicity is low, the pitch is less reliable. For some problems, it
 makes sense to mask these less reliable pitch values. However, the harmonicity
-can be noisy and the pitch has quantization artifacts. `torchcrepe` provides a
-`filters` submodule for this. The window sizes of the filters and harmonicity 
-threshold should be tuned to your data. For clean speech, a
-10-20 millisecond window with a threshold of 0.23 has worked.
+can be noisy and the pitch has quantization artifacts. `torchcrepe` provides
+submodules `filter` and `threshold` for this purpose. The filter and threshold
+parameters should be tuned to your data. For clean speech, a 10-20 millisecond
+window with a threshold of 0.21 has worked.
 
 ```
 # We'll use a 15 millisecond window assuming a hop length of 5 milliseconds
@@ -71,11 +77,16 @@ win_length = 3
 harmonicity = torchcrepe.filter.median(harmonicity, win_length)
 
 # Remove inharmonic regions
-pitch = torchcrepe.threshold(pitch, harmonicity, 0.23)
+pitch = torchcrepe.threshold.At(.21)(pitch, harmonicity)
 
 # Optionally smooth pitch to remove quantization artifacts
 pitch = torchcrepe.filter.mean(pitch, win_length)
 ```
+
+For more fine-grained control over pitch thresholding, see
+`torchcrepe.threshold.Hysteresis`. This is especially useful for removing
+spurious voiced regions caused by noise in the harmonicity values, but
+has more parameters and may require more manual tuning to your data.
 
 
 ##### Computing the CREPE model output activations

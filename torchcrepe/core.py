@@ -13,7 +13,6 @@ __all__ = ['CENTS_PER_BIN',
            'WINDOW_SIZE',
            'UNVOICED',
            'embed',
-           'harmonicity',
            'infer',
            'predict',
            'preprocess',
@@ -43,7 +42,7 @@ def embed(audio, sample_rate, hop_length, model='full'):
     """Embeds audio to the output of CREPE's fifth maxpool layer
     
     Arguments
-        audio (torch.tensor [shape=(batch, time)])
+        audio (torch.tensor [shape=(1, time)])
             The audio signals
         sample_rate (int)
             The sampling rate in Hz
@@ -53,7 +52,7 @@ def embed(audio, sample_rate, hop_length, model='full'):
             The model capacity. One of 'full' or 'tiny'.
             
     Returns
-        embedding (torch.tensor [shape=(batch, time / hop_length, 32, 8)])
+        embedding (torch.tensor [shape=(1, time / hop_length, 32, 8)])
     """
     # Preprocess audio
     frames = preprocess(audio, sample_rate, hop_length)
@@ -61,8 +60,8 @@ def embed(audio, sample_rate, hop_length, model='full'):
     # Infer pitch embeddings
     embeddings = infer(frames, model, embed=True)
     
-    # shape=(batch, time / hop_length, 32, 8)
-    return embeddings.reshape(audio.size(0), -1, 32, 8)
+    # shape=(batch, time / hop_length, 32, embedding_size)
+    return embeddings.reshape(audio.size(0), frames.size(0), 32, -1)
 
 
 def predict(audio,
@@ -76,8 +75,8 @@ def predict(audio,
     """Performs pitch estimation
     
     Arguments
-        audio (torch.tensor [shape=(batch, time)])
-            The audio signals
+        audio (torch.tensor [shape=(1, time)])
+            The audio signal
         sample_rate (int)
             The sampling rate in Hz
         hop_length (int)
@@ -94,21 +93,21 @@ def predict(audio,
             Whether to also return the network confidence
 
     Returns
-        pitch (torch.tensor [shape=(batch, time / hop_length)])
-        (Optional) harmonicity(torch.tensor [shape=(batch,
-                                                    time / hop_length)])
+        pitch (torch.tensor [shape=(1, time / hop_length)])
+        (Optional) harmonicity(torch.tensor [shape=(1, time / hop_length)])
     """
     # Preprocess audio
     frames = preprocess(audio, sample_rate, hop_length)
     
     # Infer independent probabilities for each pitch bin
-    logits = infer(frames, model)
+    probabilities = infer(frames, model)
     
     # shape=(batch, 360, time / hop_length)
-    logits = logits.reshape(audio.size(0), -1, PITCH_BINS).transpose(1, 2)
+    probabilities = probabilities.reshape(
+        audio.size(0), -1, PITCH_BINS).transpose(1, 2)
     
     # Convert probabilities to F0 and harmonicity
-    return postprocess(logits, fmin, fmax, decoder, return_harmonicity)
+    return postprocess(probabilities, fmin, fmax, decoder, return_harmonicity)
 
 
 ###############################################################################
@@ -120,7 +119,7 @@ def infer(frames, model='full', embed=False):
     """Forward pass through the model
     
     Arguments
-        frames (torch.tensor [shape=(batch * time / hop_length, 1024)])
+        frames (torch.tensor [shape=(time / hop_length, 1024)])
             The network input
         model (string)
             The model capacity. One of 'full' or 'tiny'.
@@ -128,9 +127,8 @@ def infer(frames, model='full', embed=False):
             Whether to stop inference at the intermediate embedding layer
     
     Returns 
-        logits (torch.tensor [shape=(batch * time / hop_length, 360)]) OR
-        embedding (torch.tensor [shape=(batch * time / hop_length,
-                                        embedding_size)])
+        logits (torch.tensor [shape=(time / hop_length, 360)]) OR
+        embedding (torch.tensor [shape=(time / hop_length, embedding_size)])
     """
     # Load the model if necessary
     if not hasattr(infer, 'model') or not hasattr(infer, 'capacity') or \
@@ -152,7 +150,7 @@ def infer(frames, model='full', embed=False):
     return infer.model(frames, embed=embed)
 
 
-def postprocess(logits,
+def postprocess(probabilities,
                 fmin=0.,
                 fmax=MAX_FMAX,
                 decoder=torchcrepe.decode.viterbi,
@@ -160,8 +158,8 @@ def postprocess(logits,
     """Convert model output to F0 and harmonicity
     
     Arguments
-        logits (torch.tensor [shape=(batch, 360, time / hop_length)])
-            The logits for each pitch bin inferred by the network
+        probabilities (torch.tensor [shape=(1, 360, time / hop_length)])
+            The probabilities for each pitch bin inferred by the network
         fmin (float)
             The minimum allowable frequency in Hz
         fmax (float)
@@ -172,11 +170,11 @@ def postprocess(logits,
             Whether to also return the network confidence
             
     Returns
-        pitch (torch.tensor [shape=(batch, time / hop_length)])
-        harmonicity (torch.tensor [shape=(batch, time / hop_length)])
+        pitch (torch.tensor [shape=(1, time / hop_length)])
+        harmonicity (torch.tensor [shape=(1, time / hop_length)])
     """
     # Sampling is non-differentiable, so remove from graph
-    logits = logits.detach()
+    probabilities = probabilities.detach()
     
     # Convert frequency range to pitch bin range
     minidx = torchcrepe.convert.frequency_to_bins(torch.tensor(fmin))
@@ -184,29 +182,29 @@ def postprocess(logits,
                                                   torch.ceil)
     
     # Remove frequencies outside of allowable range
-    logits[:, :minidx] = -float('inf')
-    logits[:, maxidx:] = -float('inf')
+    probabilities[:, :minidx] = -float('inf')
+    probabilities[:, maxidx:] = -float('inf')
     
     # Perform argmax or viterbi sampling
-    bins, pitch = decoder(logits)
+    bins, pitch = decoder(probabilities)
     
     if not return_harmonicity:
         return pitch
     
-    # Compute harmonicity from logits and decoded pitch bins
-    return pitch, harmonicity(logits, bins)
+    # Compute harmonicity from probabilities and decoded pitch bins
+    return pitch, harmonicity(probabilities, bins)
         
     
 def preprocess(audio, sample_rate, hop_length):
     """Convert audio to model input
     
     Arguments
-        audio (torch.tensor [shape=(batch, time)]) - The audio signals
+        audio (torch.tensor [shape=(1, time)]) - The audio signals
         sample_rate (int) - The sampling rate in Hz
         hop_length (int) - The hop_length in samples
     
     Returns
-        frames (torch.tensor [shape=(batch * time / hop_length, 1024)])
+        frames (torch.tensor [shape=(time / hop_length, 1024)])
     """
     # Resample
     if sample_rate != SAMPLE_RATE:
@@ -241,13 +239,10 @@ def preprocess(audio, sample_rate, hop_length):
 ###############################################################################
 
 
-def harmonicity(logits, bins):
+def harmonicity(probabilities, bins):
     """Computes the harmonicity from the network output and pitch bins"""
-    # Normalize logits
-    probs = torch.sigmoid(logits)
-    
     # shape=(batch * time / hop_length, 360)
-    probs_stacked = probs.transpose(1, 2).reshape(-1, PITCH_BINS)
+    probs_stacked = probabilities.transpose(1, 2).reshape(-1, PITCH_BINS)
     
     # shape=(batch * time / hop_length, 1)
     bins_stacked = bins.reshape(-1, 1)
@@ -256,7 +251,7 @@ def harmonicity(logits, bins):
     harmonicity = probs_stacked.gather(1, bins_stacked)
     
     # shape=(batch, time / hop_length)
-    return harmonicity.reshape(probs.size(0), probs.size(2))
+    return harmonicity.reshape(probabilities.size(0), probabilities.size(2))
 
 
 def resample(audio, sample_rate):

@@ -3,6 +3,9 @@ import os
 import numpy as np
 import pytest
 import torch
+import torchaudio
+
+import torchcrepe
 
 
 ###############################################################################
@@ -20,6 +23,15 @@ def activation_full():
 def activation_tiny():
     """Retrieve the original crepe activation on the test audio"""
     return np.load(path('activation-tiny.npy'))
+
+
+@pytest.fixture(scope='session')
+def audio():
+    """Retrieve the test audio"""
+    audio, sample_rate = torchaudio.load(path('test.wav'))
+    if sample_rate != torchcrepe.SAMPLE_RATE:
+        audio = torchcrepe.resample(audio, sample_rate)
+    return audio
 
     
 @pytest.fixture(scope='session')
