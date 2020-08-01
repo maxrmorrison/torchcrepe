@@ -67,7 +67,7 @@ def embed(audio, sample_rate, hop_length, model='full'):
 def predict(audio,
             sample_rate,
             hop_length,
-            fmin=0.,
+            fmin=50.,
             fmax=MAX_FMAX,
             model='full',
             decoder=torchcrepe.decode.viterbi,
