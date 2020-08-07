@@ -12,7 +12,7 @@ import torchcrepe
 def bins_to_cents(bins):
     """Converts pitch bins to cents"""
     cents = torchcrepe.CENTS_PER_BIN * bins + 1997.3794084376191
-    
+
     # Trade quantization error for noise
     return dither(cents)
 

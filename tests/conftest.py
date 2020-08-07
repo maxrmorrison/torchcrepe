@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pytest
 import torch
-import torchaudio
 
 import torchcrepe
 
@@ -28,16 +27,16 @@ def activation_tiny():
 @pytest.fixture(scope='session')
 def audio():
     """Retrieve the test audio"""
-    audio, sample_rate = torchaudio.load(path('test.wav'))
+    audio, sample_rate = torchcrepe.load.audio(path('test.wav'))
     if sample_rate != torchcrepe.SAMPLE_RATE:
         audio = torchcrepe.resample(audio, sample_rate)
     return audio
 
-    
+
 @pytest.fixture(scope='session')
 def frames():
     """Retrieve the preprocessed frames for inference
-    
+
     Note: the reason we load frames from disk rather than compute ourselves
     is that the normalizing process in the preprocessing isn't numerically
     stable. Therefore, we use the exact same preprocessed features that were
@@ -51,7 +50,7 @@ def frames():
 # Utilities
 ###############################################################################
 
-    
+
 def path(file):
     """Retrieve the path to the test file"""
     return os.path.join(os.path.dirname(__file__), 'assets', file)

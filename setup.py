@@ -4,6 +4,7 @@ from setuptools import setup
 with open('README.md') as file:
     long_description = file.read()
 
+
 setup(
     name='torchcrepe',
     description='Pytorch implementation of CREPE pitch tracker',
@@ -11,7 +12,7 @@ setup(
     author='Max Morrison',
     author_email='maxrmorrison@gmail.com',
     url='https://github.com/maxrmorrison/torchcrepe',
-    install_requires=['librosa', 'resampy', 'scipy', 'torchaudio'],
+    install_requires=['librosa', 'resampy', 'scipy', 'torch'],
     packages=['torchcrepe'],
     package_data={'torchcrepe': ['assets/*']},
     long_description=long_description,

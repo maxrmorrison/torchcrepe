@@ -17,11 +17,11 @@ Clone this repo and run `pip install .` in the `torchcrepe` directory.
 
 
 ```
-import torchaudio
 import torchcrepe
 
+
 # Load audio
-audio, sr = torchaudio.load( ... )
+audio, sr = torchcrepe.load.audio( ... )
 
 # Place the audio on the device you want CREPE to run on
 audio = audio.to( ... )
@@ -104,6 +104,24 @@ fifth max-pooling layer as a pretrained pitch embedding
 ```
 embeddings = torchcrepe.embed(audio, sr, hop_length)
 ```
+
+##### Computing from files
+
+`torchcrepe` defines the following functions convenient for predicting
+directly from audio files on disk. Each of these functions also takes
+a `device` argument that can be used for device placement (e.g.,
+`device='gpu:0'`).
+
+```
+torchcrepe.predict_from_file(audio_file, ...)
+torchcrepe.predict_from_file_to_file(
+    audio_file, ..., output_pitch_file, output_harmonicity_file)
+
+torchcrepe.embed_from_file(audio_file, ...)
+torchcrepe.embed_from_file_to_file(audio_file, ..., output_file)
+```
+
+##### Command-line interface
 
 
 ### Tests
