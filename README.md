@@ -6,11 +6,10 @@ using [MMdnn](https://github.com/microsoft/MMdnn), an open-source model
 management framework.
 
 
-### Dependencies
-See [`torchaudio` dependencies](https://github.com/pytorch/audio#dependencies)
-
-
 ### Installation
+Perform the system-dependent PyTorch install using the instructions found
+[here](https://pytorch.org/).
+
 `pip install torchcrepe`
 
 

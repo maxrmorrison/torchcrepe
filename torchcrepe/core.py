@@ -17,7 +17,7 @@ __all__ = ['CENTS_PER_BIN',
            'embed_from_file_to_file',
            'infer',
            'predict',
-           'predict_from_file`',
+           'predict_from_file',
            'predict_from_file_to_file',
            'preprocess',
            'postprocess',
@@ -177,10 +177,10 @@ def predict_from_file_to_file(audio_file,
 
     # Save to disk
     if output_harmonicity_file is not None:
-        torch.save(output_pitch_file, prediction[0].detach())
-        torch.save(output_harmonicity_file, prediction[1].detach())
+        torch.save(prediction[0].detach(), output_pitch_file)
+        torch.save(prediction[1].detach(), output_harmonicity_file)
     else:
-        torch.save(output_pitch_file, prediction.detach())
+        torch.save(prediction.detach(), output_pitch_file)
 
 
 ###############################################################################
@@ -263,7 +263,7 @@ def embed_from_file_to_file(audio_file,
     embedding = embed_from_file(audio_file, hop_length, model, device)
 
     # Save to disk
-    torch.save(output_file, embedding.detach())
+    torch.save(embedding.detach(), output_file)
 
 
 ###############################################################################
