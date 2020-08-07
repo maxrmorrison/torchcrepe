@@ -117,10 +117,10 @@ a `device` argument that can be used for device placement (e.g.,
 ```
 torchcrepe.predict_from_file(audio_file, ...)
 torchcrepe.predict_from_file_to_file(
-    audio_file, ..., output_pitch_file, output_harmonicity_file)
+    audio_file, ..., output_pitch_file, output_harmonicity_file, ...)
 
 torchcrepe.embed_from_file(audio_file, ...)
-torchcrepe.embed_from_file_to_file(audio_file, ..., output_file)
+torchcrepe.embed_from_file_to_file(audio_file, ..., output_file, ...)
 ```
 
 ##### Command-line interface
