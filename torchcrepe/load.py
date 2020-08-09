@@ -11,4 +11,5 @@ def audio(filename):
     if audio.dtype == np.int16:
         audio = audio.astype(np.float32) / np.iinfo(np.int16).max
 
-    return torch.tensor(audio)[None], sample_rate
+    # PyTorch is not compatible with non-writeable arrays, so we make a copy
+    return torch.tensor(np.copy(audio))[None], sample_rate
