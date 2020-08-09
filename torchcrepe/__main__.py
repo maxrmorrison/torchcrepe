@@ -55,9 +55,9 @@ def parse_args():
         help='The decoder to use. One of "argmax", "viterbi", or ' +
              '"weighted_argmax"')
     parser.add_argument(
-        '--device',
+        '--gpu',
         type=int,
-        help='The device to perform inference on')
+        help='The gpu to perform inference on')
 
     return parser.parse_args()
 
@@ -78,7 +78,7 @@ def main():
         make_parent_directory(args.output_harmonicity_file)
 
     # Get inference device
-    device = 'cpu' if args.device is None else f'gpu:{args.gpu}'
+    device = 'cpu' if args.gpu is None else f'gpu:{args.gpu}'
 
     # Get decoder
     if args.decoder == 'argmax':
