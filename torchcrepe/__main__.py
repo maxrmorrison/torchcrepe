@@ -78,7 +78,7 @@ def main():
         make_parent_directory(args.output_harmonicity_file)
 
     # Get inference device
-    device = 'cpu' if args.gpu is None else f'gpu:{args.gpu}'
+    device = 'cpu' if args.gpu is None else f'cuda:{args.gpu}'
 
     # Get decoder
     if args.decoder == 'argmax':
