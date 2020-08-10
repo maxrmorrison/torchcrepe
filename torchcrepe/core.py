@@ -74,18 +74,25 @@ def predict(audio,
         pitch (torch.tensor [shape=(1, time / hop_length)])
         (Optional) harmonicity(torch.tensor [shape=(1, time / hop_length)])
     """
-    # Preprocess audio
-    frames = preprocess(audio, sample_rate, hop_length)
+    # Postprocessing breaks gradients, so just don't compute them
+    with torch.no_grad():
 
-    # Infer independent probabilities for each pitch bin
-    probabilities = infer(frames, model)
+        # Preprocess audio
+        frames = preprocess(audio, sample_rate, hop_length)
 
-    # shape=(batch, 360, time / hop_length)
-    probabilities = probabilities.reshape(
-        audio.size(0), -1, PITCH_BINS).transpose(1, 2)
+        # Infer independent probabilities for each pitch bin
+        probabilities = infer(frames, model)
 
-    # Convert probabilities to F0 and harmonicity
-    return postprocess(probabilities, fmin, fmax, decoder, return_harmonicity)
+        # shape=(batch, 360, time / hop_length)
+        probabilities = probabilities.reshape(
+            audio.size(0), -1, PITCH_BINS).transpose(1, 2)
+
+        # Convert probabilities to F0 and harmonicity
+        return postprocess(probabilities,
+                           fmin,
+                           fmax,
+                           decoder,
+                           return_harmonicity)
 
 
 def predict_from_file(audio_file,
@@ -259,11 +266,14 @@ def embed_from_file_to_file(audio_file,
     Returns
         embedding (torch.tensor [shape=(1, time / hop_length, 32, -1)])
     """
-    # Embed
-    embedding = embed_from_file(audio_file, hop_length, model, device)
+    # No use computing gradients if we're just saving to file
+    with torch.no_grad():
 
-    # Save to disk
-    torch.save(embedding.detach(), output_file)
+        # Embed
+        embedding = embed_from_file(audio_file, hop_length, model, device)
+
+        # Save to disk
+        torch.save(embedding.detach(), output_file)
 
 
 ###############################################################################
@@ -401,7 +411,7 @@ def harmonicity(probabilities, bins):
     probs_stacked = probabilities.transpose(1, 2).reshape(-1, PITCH_BINS)
 
     # shape=(batch * time / hop_length, 1)
-    bins_stacked = bins.reshape(-1, 1)
+    bins_stacked = bins.reshape(-1, 1).to(torch.int64)
 
     # Use maximum logit over pitch bins as harmonicity
     harmonicity = probs_stacked.gather(1, bins_stacked)

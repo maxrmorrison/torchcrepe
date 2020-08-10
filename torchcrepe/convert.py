@@ -54,4 +54,4 @@ def dither(cents):
                                    loc=-torchcrepe.CENTS_PER_BIN,
                                    scale=2 * torchcrepe.CENTS_PER_BIN,
                                    size=cents.size())
-    return cents + noise
+    return cents + cents.new_tensor(noise)
