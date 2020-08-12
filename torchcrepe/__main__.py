@@ -14,18 +14,25 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Required arguments
-    parser.add_argument('audio_file', help='The audio file to process')
     parser.add_argument(
-        'output_file',
+        '--audio_files',
+        nargs='+',
+        required=True,
+        help='The audio file to process')
+    parser.add_argument(
+        '--output_files',
+        nargs='+',
+        required=True,
         help='The file to save pitch or embedding')
     parser.add_argument(
-        'hop_length',
+        '--hop_length',
         type=int,
         help='The hop length of the analysis window')
 
     # Optionally save harmonicity
     parser.add_argument(
-        '--output_harmonicity_file',
+        '--output_harmonicity_files',
+        nargs='+',
         help='The file to save harmonicity')
 
     # Optionally create embedding instead of pitch contour
@@ -72,10 +79,10 @@ def main():
     # Parse command-line arguments
     args = parse_args()
 
-    # Ensure output directories exist
-    make_parent_directory(args.output_file)
-    if args.output_harmonicity_file is not None:
-        make_parent_directory(args.output_harmonicity_file)
+    # Ensure output directory exist
+    [make_parent_directory(file) for file in args.output_files]
+    if args.output_harmonicity_files is not None:
+        [make_parent_directory(file) for file in args.output_harmonicity_files]
 
     # Get inference device
     device = 'cpu' if args.gpu is None else f'cuda:{args.gpu}'
@@ -90,21 +97,21 @@ def main():
 
     # Infer pitch or embedding and save to disk
     if args.embed:
-        torchcrepe.embed_from_file_to_file(args.audio_file,
-                                           args.hop_length,
-                                           args.output_file,
-                                           args.model,
-                                           device)
-    else:
-        torchcrepe.predict_from_file_to_file(args.audio_file,
+        torchcrepe.embed_from_files_to_files(args.audio_files,
+                                             args.output_files,
                                              args.hop_length,
-                                             args.output_file,
-                                             args.output_harmonicity_file,
-                                             args.fmin,
-                                             args.fmax,
                                              args.model,
-                                             decoder,
                                              device)
+    else:
+        torchcrepe.predict_from_files_to_files(args.audio_files,
+                                               args.output_files,
+                                               args.output_harmonicity_files,
+                                               args.hop_length,
+                                               args.fmin,
+                                               args.fmax,
+                                               args.model,
+                                               decoder,
+                                               device)
 
 
 # Run module entry point

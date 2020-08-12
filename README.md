@@ -117,29 +117,40 @@ a `device` argument that can be used for device placement (e.g.,
 ```
 torchcrepe.predict_from_file(audio_file, ...)
 torchcrepe.predict_from_file_to_file(
-    audio_file, ..., output_pitch_file, output_harmonicity_file, ...)
+    audio_file, output_pitch_file, output_harmonicity_file, ...)
+torchcrepe.predict_from_files_to_files(
+    audio_files, output_pitch_files, output_harmonicity_files, ...)
 
 torchcrepe.embed_from_file(audio_file, ...)
-torchcrepe.embed_from_file_to_file(audio_file, ..., output_file, ...)
+torchcrepe.embed_from_file_to_file(audio_file, output_file, ...)
+torchcrepe.embed_from_files_to_files(audio_files, output_files, ...)
 ```
 
 ##### Command-line interface
 
 ```
 usage: python -m torchcrepe
-    [-h] [--output_harmonicity_file OUTPUT_HARMONICITY_FILE]
-    [--embed] [--fmin FMIN] [--fmax FMAX] [--model MODEL]
-    [--decoder DECODER] [--device DEVICE]
-    audio_file output_file hop_length
-
-positional arguments:
-  audio_file            The audio file to process
-  output_file           The file to save pitch or embedding
-  hop_length            The hop length of the analysis window
+    [-h]
+    --audio_files AUDIO_FILES [AUDIO_FILES ...]
+    --output_files OUTPUT_FILES [OUTPUT_FILES ...]
+    [--hop_length HOP_LENGTH]
+    [--output_harmonicity_files OUTPUT_HARMONICITY_FILES [OUTPUT_HARMONICITY_FILES ...]]
+    [--embed]
+    [--fmin FMIN]
+    [--fmax FMAX]
+    [--model MODEL]
+    [--decoder DECODER]
+    [--gpu GPU]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --output_harmonicity_file OUTPUT_HARMONICITY_FILE
+  --audio_files AUDIO_FILES [AUDIO_FILES ...]
+                        The audio file to process
+  --output_files OUTPUT_FILES [OUTPUT_FILES ...]
+                        The file to save pitch or embedding
+  --hop_length HOP_LENGTH
+                        The hop length of the analysis window
+  --output_harmonicity_files OUTPUT_HARMONICITY_FILES [OUTPUT_HARMONICITY_FILES ...]
                         The file to save harmonicity
   --embed               Performs embedding instead of pitch prediction
   --fmin FMIN           The minimum frequency allowed
@@ -147,7 +158,7 @@ optional arguments:
   --model MODEL         The model capacity. One of "tiny" or "full"
   --decoder DECODER     The decoder to use. One of "argmax", "viterbi", or
                         "weighted_argmax"
-  --device DEVICE       The device to perform inference on
+  --gpu GPU             The gpu to perform inference on
 ```
 
 

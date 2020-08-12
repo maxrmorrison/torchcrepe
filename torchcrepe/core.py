@@ -1,7 +1,9 @@
 import os
 
 import numpy as np
+import resampy
 import torch
+import tqdm
 
 import torchcrepe
 
@@ -15,10 +17,12 @@ __all__ = ['CENTS_PER_BIN',
            'embed',
            'embed_from_file',
            'embed_from_file_to_file',
+           'embed_from_files_to_files',
            'infer',
            'predict',
            'predict_from_file',
            'predict_from_file_to_file',
+           'predict_from_files_to_files',
            'preprocess',
            'postprocess',
            'resample']
@@ -44,7 +48,7 @@ UNVOICED = np.nan
 
 def predict(audio,
             sample_rate,
-            hop_length,
+            hop_length=None,
             fmin=50.,
             fmax=MAX_FMAX,
             model='full',
@@ -96,7 +100,7 @@ def predict(audio,
 
 
 def predict_from_file(audio_file,
-                      hop_length,
+                      hop_length=None,
                       fmin=50.,
                       fmax=MAX_FMAX,
                       model='full',
@@ -142,9 +146,9 @@ def predict_from_file(audio_file,
 
 
 def predict_from_file_to_file(audio_file,
-                              hop_length,
                               output_pitch_file,
                               output_harmonicity_file=None,
+                              hop_length=None,
                               fmin=50.,
                               fmax=MAX_FMAX,
                               model='full',
@@ -155,12 +159,12 @@ def predict_from_file_to_file(audio_file,
     Arguments
         audio_file (string)
             The file to perform pitch tracking on
-        hop_length (int)
-            The hop_length in samples
         output_pitch_file (string)
             The file to save predicted pitch
         output_harmonicity_file (string or None)
             The file to save predicted harmonicity
+        hop_length (int)
+            The hop_length in samples
         fmin (float)
             The minimum allowable frequency in Hz
         fmax (float)
@@ -190,12 +194,59 @@ def predict_from_file_to_file(audio_file,
         torch.save(prediction.detach(), output_pitch_file)
 
 
+def predict_from_files_to_files(audio_files,
+                                output_pitch_files,
+                                output_harmonicity_files=None,
+                                hop_length=None,
+                                fmin=50.,
+                                fmax=MAX_FMAX,
+                                model='full',
+                                decoder=torchcrepe.decode.viterbi,
+                                device='cpu'):
+    """Performs pitch estimation from files on disk without reloading model
+
+    Arguments
+        audio_files (list[string])
+            The files to perform pitch tracking on
+        output_pitch_files (list[string])
+            The files to save predicted pitch
+        output_harmonicity_files (list[string] or None)
+            The files to save predicted harmonicity
+        hop_length (int)
+            The hop_length in samples
+        fmin (float)
+            The minimum allowable frequency in Hz
+        fmax (float)
+            The maximum allowable frequency in Hz
+        model (string)
+            The model capacity. One of 'full' or 'tiny'.
+        decoder (function)
+            The decoder to use. See decode.py for decoders.
+        device (string)
+            The device used to run inference
+    """
+    # Setup iterator
+    iterator = zip(audio_files, output_pitch_files, output_harmonicity_files)
+    iterator = tqdm.tqdm(iterator, dynamic_ncols=True)
+    for audio_file, output_pitch_file, output_harmonicity_file in iterator:
+
+        # Predict a file
+        predict_from_file_to_file(audio_file,
+                                  output_pitch_file,
+                                  output_harmonicity_file,
+                                  hop_length,
+                                  fmin,
+                                  fmax,
+                                  model,
+                                  decoder,
+                                  device)
+
 ###############################################################################
 # Crepe pitch embedding
 ###############################################################################
 
 
-def embed(audio, sample_rate, hop_length, model='full'):
+def embed(audio, sample_rate, hop_length=None, model='full'):
     """Embeds audio to the output of CREPE's fifth maxpool layer
 
     Arguments
@@ -221,7 +272,7 @@ def embed(audio, sample_rate, hop_length, model='full'):
     return embedding.reshape(audio.size(0), frames.size(0), 32, -1)
 
 
-def embed_from_file(audio_file, hop_length, model='full', device='cpu'):
+def embed_from_file(audio_file, hop_length=None, model='full', device='cpu'):
     """Embeds audio from disk to the output of CREPE's fifth maxpool layer
 
     Arguments
@@ -245,8 +296,8 @@ def embed_from_file(audio_file, hop_length, model='full', device='cpu'):
 
 
 def embed_from_file_to_file(audio_file,
-                            hop_length,
                             output_file,
+                            hop_length=None,
                             model='full',
                             device='cpu'):
     """Embeds audio from disk and saves to disk
@@ -262,9 +313,6 @@ def embed_from_file_to_file(audio_file,
             The model capacity. One of 'full' or 'tiny'.
         device (string)
             The device to run inference on
-
-    Returns
-        embedding (torch.tensor [shape=(1, time / hop_length, 32, -1)])
     """
     # No use computing gradients if we're just saving to file
     with torch.no_grad():
@@ -274,6 +322,38 @@ def embed_from_file_to_file(audio_file,
 
         # Save to disk
         torch.save(embedding.detach(), output_file)
+
+
+def embed_from_files_to_files(audio_files,
+                              output_files,
+                              hop_length=None,
+                              model='full',
+                              device='cpu'):
+    """Embeds audio from disk and saves to disk without reloading model
+
+    Arguments
+        audio_files (list[string])
+            The wav files containing the audio to embed
+        output_files (list[string])
+            The files to save the embeddings
+        hop_length (int)
+            The hop_length in samples
+        model (string)
+            The model capacity. One of 'full' or 'tiny'.
+        device (string)
+            The device to run inference on
+    """
+    # Setup iterator
+    iterator = zip(audio_files, output_files)
+    iterator = tqdm.tqdm(iterator, dynamic_ncols=True)
+    for audio_file, output_file in iterator:
+
+        # Embed a file
+        embed_from_file_to_file(audio_file,
+                                output_file,
+                                hop_length,
+                                model,
+                                device)
 
 
 ###############################################################################
@@ -361,7 +441,7 @@ def postprocess(probabilities,
     return pitch, harmonicity(probabilities, bins)
 
 
-def preprocess(audio, sample_rate, hop_length):
+def preprocess(audio, sample_rate, hop_length=None):
     """Convert audio to model input
 
     Arguments
@@ -372,6 +452,9 @@ def preprocess(audio, sample_rate, hop_length):
     Returns
         frames (torch.tensor [shape=(time / hop_length, 1024)])
     """
+    # Default hop length of 10 ms
+    hop_length = sample_rate // 100 if hop_length is None else hop_length
+
     # Resample
     if sample_rate != SAMPLE_RATE:
         audio = resample(audio, sample_rate)
@@ -422,8 +505,6 @@ def harmonicity(probabilities, bins):
 
 def resample(audio, sample_rate):
     """Resample audio"""
-    import resampy
-
     # Store device for later placement
     device = audio.device
 
