@@ -62,6 +62,10 @@ def parse_args():
         help='The decoder to use. One of "argmax", "viterbi", or ' +
              '"weighted_argmax"')
     parser.add_argument(
+        '--batch_size',
+        type=int,
+        help='The number of frames per batch')
+    parser.add_argument(
         '--gpu',
         type=int,
         help='The gpu to perform inference on')
@@ -101,6 +105,7 @@ def main():
                                              args.output_files,
                                              args.hop_length,
                                              args.model,
+                                             args.batch_size,
                                              device)
     else:
         torchcrepe.predict_from_files_to_files(args.audio_files,
@@ -111,6 +116,7 @@ def main():
                                                args.fmax,
                                                args.model,
                                                decoder,
+                                               args.batch_size,
                                                device)
 
 

@@ -53,7 +53,8 @@ def predict(audio,
             fmax=MAX_FMAX,
             model='full',
             decoder=torchcrepe.decode.viterbi,
-            return_harmonicity=False):
+            return_harmonicity=False,
+            batch_size=None):
     """Performs pitch estimation
 
     Arguments
@@ -73,30 +74,43 @@ def predict(audio,
             The decoder to use. See decode.py for decoders.
         return_harmonicity (bool)
             Whether to also return the network confidence
+        batch_size (int)
+            The number of frames per batch
 
     Returns
-        pitch (torch.tensor [shape=(1, time / hop_length)])
-        (Optional) harmonicity(torch.tensor [shape=(1, time / hop_length)])
+        pitch (torch.tensor [shape=(1, 1 + int(time // hop_length))])
+        (Optional) harmonicity (torch.tensor
+                                [shape=(1, 1 + int(time // hop_length))])
     """
+    results = []
+
     # Postprocessing breaks gradients, so just don't compute them
     with torch.no_grad():
 
         # Preprocess audio
-        frames = preprocess(audio, sample_rate, hop_length)
+        for frames in preprocess(audio, sample_rate, hop_length, batch_size):
 
-        # Infer independent probabilities for each pitch bin
-        probabilities = infer(frames, model)
+            # Infer independent probabilities for each pitch bin
+            probabilities = infer(frames, model)
 
-        # shape=(batch, 360, time / hop_length)
-        probabilities = probabilities.reshape(
-            audio.size(0), -1, PITCH_BINS).transpose(1, 2)
+            # shape=(batch, 360, time / hop_length)
+            probabilities = probabilities.reshape(
+                audio.size(0), -1, PITCH_BINS).transpose(1, 2)
 
-        # Convert probabilities to F0 and harmonicity
-        return postprocess(probabilities,
-                           fmin,
-                           fmax,
-                           decoder,
-                           return_harmonicity)
+            # Convert probabilities to F0 and harmonicity
+            results.append(postprocess(probabilities,
+                                       fmin,
+                                       fmax,
+                                       decoder,
+                                       return_harmonicity))
+
+    # Split pitch and harmonicity
+    if return_harmonicity:
+        pitch, harmonicity = zip(*results)
+        return torch.cat(pitch, 1), torch.cat(harmonicity, 1)
+
+    # Concatenate
+    return torch.cat(results, 1)
 
 
 def predict_from_file(audio_file,
@@ -106,6 +120,7 @@ def predict_from_file(audio_file,
                       model='full',
                       decoder=torchcrepe.decode.viterbi,
                       return_harmonicity=False,
+                      batch_size=None,
                       device='cpu'):
     """Performs pitch estimation from file on disk
 
@@ -124,12 +139,15 @@ def predict_from_file(audio_file,
             The decoder to use. See decode.py for decoders.
         return_harmonicity (bool)
             Whether to also return the network confidence
+        batch_size (int)
+            The number of frames per batch
         device (string)
             The device used to run inference
 
     Returns
-        pitch (torch.tensor [shape=(1, time / hop_length)])
-        (Optional) harmonicity(torch.tensor [shape=(1, time / hop_length)])
+        pitch (torch.tensor [shape=(1, 1 + int(time // hop_length))])
+        (Optional) harmonicity (torch.tensor
+                                [shape=(1, 1 + int(time // hop_length))])
     """
     # Load audio
     audio, sample_rate = torchcrepe.load.audio(audio_file)
@@ -142,7 +160,8 @@ def predict_from_file(audio_file,
                    fmax,
                    model,
                    decoder,
-                   return_harmonicity)
+                   return_harmonicity,
+                   batch_size)
 
 
 def predict_from_file_to_file(audio_file,
@@ -153,6 +172,7 @@ def predict_from_file_to_file(audio_file,
                               fmax=MAX_FMAX,
                               model='full',
                               decoder=torchcrepe.decode.viterbi,
+                              batch_size=None,
                               device='cpu'):
     """Performs pitch estimation from file on disk
 
@@ -173,6 +193,8 @@ def predict_from_file_to_file(audio_file,
             The model capacity. One of 'full' or 'tiny'.
         decoder (function)
             The decoder to use. See decode.py for decoders.
+        batch_size (int)
+            The number of frames per batch
         device (string)
             The device used to run inference
     """
@@ -184,6 +206,7 @@ def predict_from_file_to_file(audio_file,
                                    model,
                                    decoder,
                                    output_harmonicity_file is not None,
+                                   batch_size,
                                    device)
 
     # Save to disk
@@ -202,6 +225,7 @@ def predict_from_files_to_files(audio_files,
                                 fmax=MAX_FMAX,
                                 model='full',
                                 decoder=torchcrepe.decode.viterbi,
+                                batch_size=None,
                                 device='cpu'):
     """Performs pitch estimation from files on disk without reloading model
 
@@ -222,6 +246,8 @@ def predict_from_files_to_files(audio_files,
             The model capacity. One of 'full' or 'tiny'.
         decoder (function)
             The decoder to use. See decode.py for decoders.
+        batch_size (int)
+            The number of frames per batch
         device (string)
             The device used to run inference
     """
@@ -239,6 +265,7 @@ def predict_from_files_to_files(audio_files,
                                   fmax,
                                   model,
                                   decoder,
+                                  batch_size,
                                   device)
 
 ###############################################################################
@@ -246,7 +273,7 @@ def predict_from_files_to_files(audio_files,
 ###############################################################################
 
 
-def embed(audio, sample_rate, hop_length=None, model='full'):
+def embed(audio, sample_rate, hop_length=None, model='full', batch_size=None):
     """Embeds audio to the output of CREPE's fifth maxpool layer
 
     Arguments
@@ -258,21 +285,33 @@ def embed(audio, sample_rate, hop_length=None, model='full'):
             The hop_length in samples
         model (string)
             The model capacity. One of 'full' or 'tiny'.
+        batch_size (int)
+            The number of frames per batch
 
     Returns
-        embedding (torch.tensor [shape=(1, time / hop_length, 32, -1)])
+        embedding (torch.tensor [shape=(1,
+                                        1 + int(time // hop_length), 32, -1)])
     """
+    results = []
+
     # Preprocess audio
-    frames = preprocess(audio, sample_rate, hop_length)
+    for frames in preprocess(audio, sample_rate, hop_length, batch_size):
 
-    # Infer pitch embeddings
-    embedding = infer(frames, model, embed=True)
+        # Infer pitch embeddings
+        embedding = infer(frames, model, embed=True)
 
-    # shape=(batch, time / hop_length, 32, embedding_size)
-    return embedding.reshape(audio.size(0), frames.size(0), 32, -1)
+        # shape=(batch, time / hop_length, 32, embedding_size)
+        results.append(embedding.reshape(audio.size(0), frames.size(0), 32, -1))
+
+    # Concatenate
+    return torch.cat(results, 1)
 
 
-def embed_from_file(audio_file, hop_length=None, model='full', device='cpu'):
+def embed_from_file(audio_file,
+                    hop_length=None,
+                    model='full',
+                    batch_size=None,
+                    device='cpu'):
     """Embeds audio from disk to the output of CREPE's fifth maxpool layer
 
     Arguments
@@ -282,23 +321,27 @@ def embed_from_file(audio_file, hop_length=None, model='full', device='cpu'):
             The hop_length in samples
         model (string)
             The model capacity. One of 'full' or 'tiny'.
+        batch_size (int)
+            The number of frames per batch
         device (string)
             The device to run inference on
 
     Returns
-        embedding (torch.tensor [shape=(1, time / hop_length, 32, -1)])
+        embedding (torch.tensor [shape=(1,
+                                        1 + int(time // hop_length), 32, -1)])
     """
     # Load audio
     audio, sample_rate = torchcrepe.load.audio(audio_file)
 
     # Embed
-    return embed(audio.to(device), sample_rate, hop_length, model)
+    return embed(audio.to(device), sample_rate, hop_length, model, batch_size)
 
 
 def embed_from_file_to_file(audio_file,
                             output_file,
                             hop_length=None,
                             model='full',
+                            batch_size=None,
                             device='cpu'):
     """Embeds audio from disk and saves to disk
 
@@ -311,6 +354,8 @@ def embed_from_file_to_file(audio_file,
             The file to save the embedding
         model (string)
             The model capacity. One of 'full' or 'tiny'.
+        batch_size (int)
+            The number of frames per batch
         device (string)
             The device to run inference on
     """
@@ -318,7 +363,11 @@ def embed_from_file_to_file(audio_file,
     with torch.no_grad():
 
         # Embed
-        embedding = embed_from_file(audio_file, hop_length, model, device)
+        embedding = embed_from_file(audio_file,
+                                    hop_length,
+                                    model,
+                                    batch_size,
+                                    device)
 
         # Save to disk
         torch.save(embedding.detach(), output_file)
@@ -328,6 +377,7 @@ def embed_from_files_to_files(audio_files,
                               output_files,
                               hop_length=None,
                               model='full',
+                              batch_size=None,
                               device='cpu'):
     """Embeds audio from disk and saves to disk without reloading model
 
@@ -340,6 +390,8 @@ def embed_from_files_to_files(audio_files,
             The hop_length in samples
         model (string)
             The model capacity. One of 'full' or 'tiny'.
+        batch_size (int)
+            The number of frames per batch
         device (string)
             The device to run inference on
     """
@@ -353,6 +405,7 @@ def embed_from_files_to_files(audio_files,
                                 output_file,
                                 hop_length,
                                 model,
+                                batch_size,
                                 device)
 
 
@@ -373,8 +426,9 @@ def infer(frames, model='full', embed=False):
             Whether to stop inference at the intermediate embedding layer
 
     Returns
-        logits (torch.tensor [shape=(time / hop_length, 360)]) OR
-        embedding (torch.tensor [shape=(time / hop_length, embedding_size)])
+        logits (torch.tensor [shape=(1 + int(time // hop_length), 360)]) OR
+        embedding (torch.tensor [shape=(1 + int(time // hop_length),
+                                       embedding_size)])
     """
     # Load the model if necessary
     if not hasattr(infer, 'model') or not hasattr(infer, 'capacity') or \
@@ -416,8 +470,8 @@ def postprocess(probabilities,
             Whether to also return the network confidence
 
     Returns
-        pitch (torch.tensor [shape=(1, time / hop_length)])
-        harmonicity (torch.tensor [shape=(1, time / hop_length)])
+        pitch (torch.tensor [shape=(1, 1 + int(time // hop_length))])
+        harmonicity (torch.tensor [shape=(1, 1 + int(time // hop_length))])
     """
     # Sampling is non-differentiable, so remove from graph
     probabilities = probabilities.detach()
@@ -441,16 +495,17 @@ def postprocess(probabilities,
     return pitch, harmonicity(probabilities, bins)
 
 
-def preprocess(audio, sample_rate, hop_length=None):
+def preprocess(audio, sample_rate, hop_length=None, batch_size=None):
     """Convert audio to model input
 
     Arguments
         audio (torch.tensor [shape=(1, time)]) - The audio signals
         sample_rate (int) - The sampling rate in Hz
         hop_length (int) - The hop_length in samples
+        batch_size (int) - The number of frames per batch
 
     Returns
-        frames (torch.tensor [shape=(time / hop_length, 1024)])
+        frames (torch.tensor [shape=(1 + int(time // hop_length), 1024)])
     """
     # Default hop length of 10 ms
     hop_length = sample_rate // 100 if hop_length is None else hop_length
@@ -464,23 +519,36 @@ def preprocess(audio, sample_rate, hop_length=None):
     audio = torch.nn.functional.pad(audio,
                                     (WINDOW_SIZE // 2, WINDOW_SIZE // 2))
 
-    # Chunk
-    frames = torch.nn.functional.unfold(
-        audio[:, None, None, :],
-        kernel_size=(1, WINDOW_SIZE),
-        stride=(1, hop_length))
+    # Get total number of frames
+    total_frames = 1 + int(audio.size(1) // hop_length)
 
-    # shape=(batch * time / hop_length, 1024)
-    frames = frames.transpose(1, 2).reshape(-1, WINDOW_SIZE)
+    # Default to running all frames in a single batch
+    batch_size = total_frames if batch_size is None else batch_size
 
-    # Normalize
-    frames -= frames.mean(dim=1, keepdim=True)
+    # Generate batches
+    for i in range(0, total_frames, batch_size):
 
-    # Note: during silent frames, this produces very large numbers. But this
-    # seems to be what crepe expects.
-    frames /= frames.std(dim=1, keepdim=True)
+        # Convert to sample indices
+        start = i * hop_length
+        end = min(audio.size(1), (i + batch_size) * hop_length)
 
-    return frames
+        # Chunk
+        frames = torch.nn.functional.unfold(
+            audio[:, None, None, start:end],
+            kernel_size=(1, WINDOW_SIZE),
+            stride=(1, hop_length))
+
+        # shape=(batch * time / hop_length, 1024)
+        frames = frames.transpose(1, 2).reshape(-1, WINDOW_SIZE)
+
+        # Normalize
+        frames -= frames.mean(dim=1, keepdim=True)
+
+        # Note: during silent frames, this produces very large numbers. But
+        # this seems to be what crepe expects.
+        frames /= frames.std(dim=1, keepdim=True)
+
+        yield frames
 
 
 ###############################################################################
