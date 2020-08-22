@@ -251,6 +251,9 @@ def predict_from_files_to_files(audio_files,
         device (string)
             The device used to run inference
     """
+    if output_harmonicity_files is None:
+        output_harmonicity_files = len(audio_files) * [None]
+
     # Setup iterator
     iterator = zip(audio_files, output_pitch_files, output_harmonicity_files)
     iterator = tqdm.tqdm(iterator, dynamic_ncols=True)
@@ -433,15 +436,7 @@ def infer(frames, model='full', embed=False):
     # Load the model if necessary
     if not hasattr(infer, 'model') or not hasattr(infer, 'capacity') or \
        (hasattr(infer, 'capacity') and infer.capacity != model):
-        infer.model = torchcrepe.Crepe(model)
-
-        # Load weights
-        file = os.path.join(
-            os.path.dirname(__file__), 'assets', f'{model}.pth')
-        infer.model.load_state_dict(torch.load(file))
-
-        infer.model.eval()
-        infer.capacity = model
+        torchcrepe.load.model(frames.device, model)
 
     # Move model to correct device (no-op if devices are the same)
     infer.model = infer.model.to(frames.device)
