@@ -40,10 +40,10 @@ class Hysteresis:
         device = pitch.device
 
         # Perform hysteresis in log-2 space
-        pitch = torch.log2(pitch).detach().flatten().numpy()
+        pitch = torch.log2(pitch).detach().flatten().cpu().numpy()
 
         # Flatten harmonicity
-        harmonicity = harmonicity.flatten().numpy()
+        harmonicity = harmonicity.flatten().cpu().numpy()
 
         # Ignore confidently unvoiced pitch
         pitch[harmonicity < self.lower_bound] = torchcrepe.UNVOICED
