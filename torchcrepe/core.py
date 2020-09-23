@@ -517,33 +517,30 @@ def preprocess(audio, sample_rate, hop_length=None, batch_size=None):
     # Get total number of frames
     total_frames = 1 + int(audio.size(1) // hop_length)
 
+    # Chunk
+    frames = torch.nn.functional.unfold(
+        audio[:, None, None, :],
+        kernel_size=(1, WINDOW_SIZE),
+        stride=(1, hop_length))
+
+    # shape=(1 + int(time / hop_length, 1024)
+    frames = frames.transpose(1, 2).reshape(-1, WINDOW_SIZE)
+
+    # Mean-center
+    frames -= frames.mean(dim=1, keepdim=True)
+
+    # Scale
+    # Note: during silent frames, this produces very large values. But
+    # this seems to be what the network expects.
+    frames /= torch.max(torch.tensor(1e-10, device=frames.device),
+                        frames.std(dim=1, keepdim=True))
+
     # Default to running all frames in a single batch
     batch_size = total_frames if batch_size is None else batch_size
 
     # Generate batches
     for i in range(0, total_frames, batch_size):
-
-        # Convert to sample indices
-        start = i * hop_length
-        end = min(audio.size(1), (i + batch_size) * hop_length)
-
-        # Chunk
-        frames = torch.nn.functional.unfold(
-            audio[:, None, None, start:end],
-            kernel_size=(1, WINDOW_SIZE),
-            stride=(1, hop_length))
-
-        # shape=(batch * time / hop_length, 1024)
-        frames = frames.transpose(1, 2).reshape(-1, WINDOW_SIZE)
-
-        # Normalize
-        frames -= frames.mean(dim=1, keepdim=True)
-
-        # Note: during silent frames, this produces very large numbers. But
-        # this seems to be what crepe expects.
-        frames /= frames.std(dim=1, keepdim=True)
-
-        yield frames
+        yield frames[i:min(total_frames, i + batch_size)]
 
 
 ###############################################################################
