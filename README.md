@@ -112,7 +112,7 @@ embeddings = torchcrepe.embed(audio, sr, hop_length)
 `torchcrepe` defines the following functions convenient for predicting
 directly from audio files on disk. Each of these functions also takes
 a `device` argument that can be used for device placement (e.g.,
-`device='gpu:0'`).
+`device='cuda:0'`).
 
 ```
 torchcrepe.predict_from_file(audio_file, ...)
