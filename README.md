@@ -94,7 +94,8 @@ has more parameters and may require more manual tuning to your data.
 ##### Computing the CREPE model output activations
 
 ```
-probabilities = torchcrepe.infer(torchcrepe.preprocess(audio, sr, hop_length))
+batch = next(torchcrepe.preprocess(audio, sr, hop_length))
+probabilities = torchcrepe.infer(batch)
 ```
 
 
