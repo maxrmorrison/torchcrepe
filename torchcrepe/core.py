@@ -54,7 +54,8 @@ def predict(audio,
             model='full',
             decoder=torchcrepe.decode.viterbi,
             return_harmonicity=False,
-            batch_size=None):
+            batch_size=None,
+            device='cpu'):
     """Performs pitch estimation
 
     Arguments
@@ -76,6 +77,8 @@ def predict(audio,
             Whether to also return the network confidence
         batch_size (int)
             The number of frames per batch
+        device (string)
+            The device used to run inference
 
     Returns
         pitch (torch.tensor [shape=(1, 1 + int(time // hop_length))])
@@ -88,7 +91,12 @@ def predict(audio,
     with torch.no_grad():
 
         # Preprocess audio
-        for frames in preprocess(audio, sample_rate, hop_length, batch_size):
+        generator = preprocess(audio,
+                               sample_rate,
+                               hop_length,
+                               batch_size,
+                               device)
+        for frames in generator:
 
             # Infer independent probabilities for each pitch bin
             probabilities = infer(frames, model)
@@ -153,7 +161,7 @@ def predict_from_file(audio_file,
     audio, sample_rate = torchcrepe.load.audio(audio_file)
 
     # Predict
-    return predict(audio.to(device),
+    return predict(audio,
                    sample_rate,
                    hop_length,
                    fmin,
@@ -161,7 +169,8 @@ def predict_from_file(audio_file,
                    model,
                    decoder,
                    return_harmonicity,
-                   batch_size)
+                   batch_size,
+                   device)
 
 
 def predict_from_file_to_file(audio_file,
@@ -276,7 +285,12 @@ def predict_from_files_to_files(audio_files,
 ###############################################################################
 
 
-def embed(audio, sample_rate, hop_length=None, model='full', batch_size=None):
+def embed(audio,
+          sample_rate,
+          hop_length=None,
+          model='full',
+          batch_size=None,
+          device='cpu'):
     """Embeds audio to the output of CREPE's fifth maxpool layer
 
     Arguments
@@ -290,6 +304,8 @@ def embed(audio, sample_rate, hop_length=None, model='full', batch_size=None):
             The model capacity. One of 'full' or 'tiny'.
         batch_size (int)
             The number of frames per batch
+        device (string)
+            The device to run inference on
 
     Returns
         embedding (torch.tensor [shape=(1,
@@ -298,7 +314,8 @@ def embed(audio, sample_rate, hop_length=None, model='full', batch_size=None):
     results = []
 
     # Preprocess audio
-    for frames in preprocess(audio, sample_rate, hop_length, batch_size):
+    generator = preprocess(audio, sample_rate, hop_length, batch_size, device)
+    for frames in generator:
 
         # Infer pitch embeddings
         embedding = infer(frames, model, embed=True)
@@ -337,7 +354,7 @@ def embed_from_file(audio_file,
     audio, sample_rate = torchcrepe.load.audio(audio_file)
 
     # Embed
-    return embed(audio.to(device), sample_rate, hop_length, model, batch_size)
+    return embed(audio, sample_rate, hop_length, model, batch_size, device)
 
 
 def embed_from_file_to_file(audio_file,
@@ -490,14 +507,24 @@ def postprocess(probabilities,
     return pitch, harmonicity(probabilities, bins)
 
 
-def preprocess(audio, sample_rate, hop_length=None, batch_size=None):
+def preprocess(audio,
+               sample_rate,
+               hop_length=None,
+               batch_size=None,
+               device='cpu'):
     """Convert audio to model input
 
     Arguments
-        audio (torch.tensor [shape=(1, time)]) - The audio signals
-        sample_rate (int) - The sampling rate in Hz
-        hop_length (int) - The hop_length in samples
-        batch_size (int) - The number of frames per batch
+        audio (torch.tensor [shape=(1, time)])
+            The audio signals
+        sample_rate (int)
+            The sampling rate in Hz
+        hop_length (int)
+            The hop_length in samples
+        batch_size (int)
+            The number of frames per batch
+        device (string)
+            The device to run inference on
 
     Returns
         frames (torch.tensor [shape=(1 + int(time // hop_length), 1024)])
@@ -536,6 +563,9 @@ def preprocess(audio, sample_rate, hop_length=None, batch_size=None):
 
         # shape=(1 + int(time / hop_length, 1024)
         frames = frames.transpose(1, 2).reshape(-1, WINDOW_SIZE)
+
+        # Place on device
+        frames = frames.to(device)
 
         # Mean-center
         frames -= frames.mean(dim=1, keepdim=True)

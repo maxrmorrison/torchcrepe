@@ -25,9 +25,6 @@ import torchcrepe
 # Load audio
 audio, sr = torchcrepe.load.audio( ... )
 
-# Place the audio on the device you want CREPE to run on
-audio = audio.to( ... )
-
 # Here we'll use a 5 millisecond hop length
 hop_length = int(sr / 200.)
 
@@ -39,8 +36,21 @@ fmax = 550
 # Select a model capacity--one of "tiny" or "full"
 model = 'tiny'
 
-# Compute pitch and harmonicity
-pitch = torchcrepe.predict(audio, sr, hop_length, fmin, fmax, model)
+# Choose a device to use for inference
+device = 'cuda:0'
+
+# Pick a batch size that doesn't cause memory errors on your gpu
+batch_size = 2048
+
+# Compute pitch using first gpu
+pitch = torchcrepe.predict(audio,
+                           sr,
+                           hop_length,
+                           fmin,
+                           fmax,
+                           model,
+                           batch_size=batch_size,
+                           device=device)
 ```
 
 A harmonicity metric similar to the Crepe confidence score can also be
