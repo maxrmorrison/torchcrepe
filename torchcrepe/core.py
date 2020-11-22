@@ -106,11 +106,14 @@ def predict(audio,
                 audio.size(0), -1, PITCH_BINS).transpose(1, 2)
 
             # Convert probabilities to F0 and harmonicity
-            results.append(postprocess(probabilities,
-                                       fmin,
-                                       fmax,
-                                       decoder,
-                                       return_harmonicity))
+            result = postprocess(probabilities,
+                                 fmin,
+                                 fmax,
+                                 decoder,
+                                 return_harmonicity)
+
+            # Place on same device as audio to allow very long inputs
+            results.append(result.to(audio.device))
 
     # Split pitch and harmonicity
     if return_harmonicity:
@@ -321,7 +324,10 @@ def embed(audio,
         embedding = infer(frames, model, embed=True)
 
         # shape=(batch, time / hop_length, 32, embedding_size)
-        results.append(embedding.reshape(audio.size(0), frames.size(0), 32, -1))
+        result = embedding.reshape(audio.size(0), frames.size(0), 32, -1)
+
+        # Place on same device as audio. This allows for large inputs.
+        results.append(result.to(audio.device))
 
     # Concatenate
     return torch.cat(results, 1)
