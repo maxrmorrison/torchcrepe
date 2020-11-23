@@ -113,7 +113,13 @@ def predict(audio,
                                  return_harmonicity)
 
             # Place on same device as audio to allow very long inputs
-            results.append(result.to(audio.device))
+            if isinstance(result, tuple):
+                result = (result[0].to(audio.device),
+                          result[1].to(audio.device))
+            else:
+                 result = result.to(audio.device)
+
+            results.append(result)
 
     # Split pitch and harmonicity
     if return_harmonicity:
