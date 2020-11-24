@@ -274,7 +274,7 @@ def predict_from_files_to_files(audio_files,
 
     # Setup iterator
     iterator = zip(audio_files, output_pitch_files, output_harmonicity_files)
-    iterator = tqdm.tqdm(iterator, dynamic_ncols=True)
+    iterator = tqdm.tqdm(iterator, desc='torchcrepe', dynamic_ncols=True)
     for audio_file, output_pitch_file, output_harmonicity_file in iterator:
 
         # Predict a file
@@ -429,7 +429,7 @@ def embed_from_files_to_files(audio_files,
     """
     # Setup iterator
     iterator = zip(audio_files, output_files)
-    iterator = tqdm.tqdm(iterator, dynamic_ncols=True)
+    iterator = tqdm.tqdm(iterator, desc='torchcrepe', dynamic_ncols=True)
     for audio_file, output_file in iterator:
 
         # Embed a file
