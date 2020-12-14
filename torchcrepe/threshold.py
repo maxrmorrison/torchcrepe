@@ -16,6 +16,10 @@ class At:
         self.value = value
 
     def __call__(self, pitch, harmonicity):
+        # Make a copy to prevent in-place modification
+        pitch = torch.clone(pitch)
+
+        # Threshold
         pitch[harmonicity < self.value] = torchcrepe.UNVOICED
         return pitch
 
