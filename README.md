@@ -18,7 +18,7 @@ Perform the system-dependent PyTorch install using the instructions found
 ##### Computing pitch and harmonicity from audio
 
 
-```
+```python
 import torchcrepe
 
 
@@ -63,7 +63,7 @@ The argmax operation can cause double/half frequency errors. These can be
 removed by penalizing large pitch jumps via Viterbi decoding. The `decode`
 submodule provides some options for decoding.
 
-```
+```python
 # Decode using viterbi decoding (default)
 torchcrepe.predict(..., decoder=torchcrepe.decode.viterbi)
 
@@ -81,7 +81,7 @@ submodules `filter` and `threshold` for this purpose. The filter and threshold
 parameters should be tuned to your data. For clean speech, a 10-20 millisecond
 window with a threshold of 0.21 has worked.
 
-```
+```python
 # We'll use a 15 millisecond window assuming a hop length of 5 milliseconds
 win_length = 3
 
@@ -103,7 +103,7 @@ has more parameters and may require more manual tuning to your data.
 
 ##### Computing the CREPE model output activations
 
-```
+```python
 batch = next(torchcrepe.preprocess(audio, sr, hop_length))
 probabilities = torchcrepe.infer(batch)
 ```
@@ -114,7 +114,7 @@ probabilities = torchcrepe.infer(batch)
 As in Differentiable Digital Signal Processing, this uses the output of the
 fifth max-pooling layer as a pretrained pitch embedding
 
-```
+```python
 embeddings = torchcrepe.embed(audio, sr, hop_length)
 ```
 
@@ -125,7 +125,7 @@ directly from audio files on disk. Each of these functions also takes
 a `device` argument that can be used for device placement (e.g.,
 `device='cuda:0'`).
 
-```
+```python
 torchcrepe.predict_from_file(audio_file, ...)
 torchcrepe.predict_from_file_to_file(
     audio_file, output_pitch_file, output_harmonicity_file, ...)
@@ -139,7 +139,7 @@ torchcrepe.embed_from_files_to_files(audio_files, output_files, ...)
 
 ##### Command-line interface
 
-```
+```bash
 usage: python -m torchcrepe
     [-h]
     --audio_files AUDIO_FILES [AUDIO_FILES ...]
@@ -177,7 +177,7 @@ optional arguments:
 
 The module tests can be run as follows.
 
-```
+```bash
 pip install pytest
 pytest
 ```
