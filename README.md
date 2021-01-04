@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://pepy.tech/badge/torchcrepe)](https://pepy.tech/project/torchcrepe)
 
-Pytorch implementation of the CREPE pitch tracker. The original Tensorflow
+Pytorch implementation of the CREPE [1] pitch tracker. The original Tensorflow
 implementation can be found [here](https://github.com/marl/crepe/). The
 provided model weights were obtained by converting the "tiny" and "full" models
 using [MMdnn](https://github.com/microsoft/MMdnn), an open-source model
@@ -115,7 +115,7 @@ probabilities = torchcrepe.infer(batch)
 
 ##### Computing the CREPE embedding space
 
-As in Differentiable Digital Signal Processing, this uses the output of the
+As in Differentiable Digital Signal Processing [2], this uses the output of the
 fifth max-pooling layer as a pretrained pitch embedding
 
 ```python
@@ -185,3 +185,15 @@ The module tests can be run as follows.
 pip install pytest
 pytest
 ```
+
+
+### References
+[1] J. W. Kim, J. Salamon, P. Li, and J. P. Bello, “Crepe: A
+Convolutional Representation for Pitch Estimation,” in 2018 IEEE
+International Conference on Acoustics, Speech and Signal
+Processing (ICASSP).
+
+[2] J. H. Engel, L. Hantrakul, C. Gu, and A. Roberts,
+“DDSP: Differentiable Digital Signal Processing,” in
+2020 International Conference on Learning
+Representations (ICLR).
