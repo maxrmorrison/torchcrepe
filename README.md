@@ -10,7 +10,7 @@ using [MMdnn](https://github.com/microsoft/MMdnn), an open-source model
 management framework.
 
 
-### Installation
+## Installation
 Perform the system-dependent PyTorch install using the instructions found
 [here](https://pytorch.org/).
 
