@@ -17,9 +17,9 @@ Perform the system-dependent PyTorch install using the instructions found
 `pip install torchcrepe`
 
 
-### Usage
+## Usage
 
-##### Computing pitch and harmonicity from audio
+### Computing pitch and harmonicity from audio
 
 
 ```python
@@ -105,7 +105,7 @@ spurious voiced regions caused by noise in the harmonicity values, but
 has more parameters and may require more manual tuning to your data.
 
 
-##### Computing the CREPE model output activations
+### Computing the CREPE model output activations
 
 ```python
 batch = next(torchcrepe.preprocess(audio, sr, hop_length))
@@ -113,7 +113,7 @@ probabilities = torchcrepe.infer(batch)
 ```
 
 
-##### Computing the CREPE embedding space
+### Computing the CREPE embedding space
 
 As in Differentiable Digital Signal Processing [2], this uses the output of the
 fifth max-pooling layer as a pretrained pitch embedding
@@ -122,7 +122,7 @@ fifth max-pooling layer as a pretrained pitch embedding
 embeddings = torchcrepe.embed(audio, sr, hop_length)
 ```
 
-##### Computing from files
+### Computing from files
 
 `torchcrepe` defines the following functions convenient for predicting
 directly from audio files on disk. Each of these functions also takes
@@ -141,7 +141,7 @@ torchcrepe.embed_from_file_to_file(audio_file, output_file, ...)
 torchcrepe.embed_from_files_to_files(audio_files, output_files, ...)
 ```
 
-##### Command-line interface
+### Command-line interface
 
 ```bash
 usage: python -m torchcrepe
@@ -177,7 +177,7 @@ optional arguments:
 ```
 
 
-### Tests
+## Tests
 
 The module tests can be run as follows.
 
@@ -187,7 +187,7 @@ pytest
 ```
 
 
-### References
+## References
 [1] J. W. Kim, J. Salamon, P. Li, and J. P. Bello, “Crepe: A
 Convolutional Representation for Pitch Estimation,” in 2018 IEEE
 International Conference on Acoustics, Speech and Signal
