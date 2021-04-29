@@ -11,10 +11,10 @@ import torchcrepe
 def test_at():
     """Test torchcrepe.threshold.At"""
     input_pitch = torch.tensor([100., 110., 120., 130., 140.])
-    harmonicity = torch.tensor([.19, .22, .25, .17, .30])
+    periodicity = torch.tensor([.19, .22, .25, .17, .30])
 
     # Perform thresholding
-    output_pitch = torchcrepe.threshold.At(.20)(input_pitch, harmonicity)
+    output_pitch = torchcrepe.threshold.At(.20)(input_pitch, periodicity)
 
     # Ensure thresholding is not in-place
     assert not (input_pitch == output_pitch).all()

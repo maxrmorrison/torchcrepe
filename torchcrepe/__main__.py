@@ -1,5 +1,6 @@
 import argparse
 import os
+import warnings
 
 import torchcrepe
 
@@ -29,11 +30,16 @@ def parse_args():
         type=int,
         help='The hop length of the analysis window')
 
-    # Optionally save harmonicity
+    # Optionally save harmonicity [DEPRECATED]
     parser.add_argument(
         '--output_harmonicity_files',
         nargs='+',
         help='The file to save harmonicity')
+    # Optionally save periodicity
+    parser.add_argument(
+        '--output_periodicity_files',
+        nargs='+',
+        help='The files to save periodicity')
 
     # Optionally create embedding instead of pitch contour
     parser.add_argument(
@@ -83,10 +89,21 @@ def main():
     # Parse command-line arguments
     args = parse_args()
 
+    # Deprecate output_harmonicity_files
+    if args.output_harmonicity_files is not None:
+        message = (
+            'The torchcrepe output_harmonicity_files argument is deprecated and '
+            'will be removed in a future release. Please use '
+            'output_periodicity_files. Rationale: if network confidence measured '
+            'harmonic content, the value would be low for non-harmonic, periodic '
+            'sounds (e.g., sine waves). But this is not observed.')
+        warnings.warn(message, DeprecationWarning)
+        args.output_periodicity_files = args.output_harmonicity_files
+
     # Ensure output directory exist
     [make_parent_directory(file) for file in args.output_files]
-    if args.output_harmonicity_files is not None:
-        [make_parent_directory(file) for file in args.output_harmonicity_files]
+    if args.output_periodicity_files is not None:
+        [make_parent_directory(file) for file in args.output_periodicity_files]
 
     # Get inference device
     device = 'cpu' if args.gpu is None else f'cuda:{args.gpu}'
@@ -110,7 +127,8 @@ def main():
     else:
         torchcrepe.predict_from_files_to_files(args.audio_files,
                                                args.output_files,
-                                               args.output_harmonicity_files,
+                                               None,
+                                               args.output_periodicity_files,
                                                args.hop_length,
                                                args.fmin,
                                                args.fmax,

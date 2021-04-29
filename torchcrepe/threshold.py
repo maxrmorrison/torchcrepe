@@ -15,12 +15,12 @@ class At:
     def __init__(self, value):
         self.value = value
 
-    def __call__(self, pitch, harmonicity):
+    def __call__(self, pitch, periodicity):
         # Make a copy to prevent in-place modification
         pitch = torch.clone(pitch)
 
         # Threshold
-        pitch[harmonicity < self.value] = torchcrepe.UNVOICED
+        pitch[periodicity < self.value] = torchcrepe.UNVOICED
         return pitch
 
 
@@ -39,18 +39,18 @@ class Hysteresis:
         self.stds = stds
         self.return_threshold = return_threshold
 
-    def __call__(self, pitch, harmonicity):
+    def __call__(self, pitch, periodicity):
         # Save output device
         device = pitch.device
 
         # Perform hysteresis in log-2 space
         pitch = torch.log2(pitch).detach().flatten().cpu().numpy()
 
-        # Flatten harmonicity
-        harmonicity = harmonicity.flatten().cpu().numpy()
+        # Flatten periodicity
+        periodicity = periodicity.flatten().cpu().numpy()
 
         # Ignore confidently unvoiced pitch
-        pitch[harmonicity < self.lower_bound] = torchcrepe.UNVOICED
+        pitch[periodicity < self.lower_bound] = torchcrepe.UNVOICED
 
         # Whiten pitch
         mean, std = np.nanmean(pitch), np.nanstd(pitch)
@@ -64,17 +64,17 @@ class Hysteresis:
 
         # Apply hysteresis to prevent short, unconfident voiced regions
         i = 0
-        while i < len(harmonicity) - 1:
+        while i < len(periodicity) - 1:
 
             # Detect unvoiced to voiced transition
-            if harmonicity[i] < threshold[i] and \
-               harmonicity[i + 1] > threshold[i + 1]:
+            if periodicity[i] < threshold[i] and \
+               periodicity[i + 1] > threshold[i + 1]:
 
                 # Grow region until next unvoiced or end of array
                 start, end, keep = i + 1, i + 1, False
-                while end < len(harmonicity) and \
-                      harmonicity[end] > threshold[end]:
-                    if harmonicity[end] > self.upper_bound:
+                while end < len(periodicity) and \
+                      periodicity[end] > threshold[end]:
+                    if periodicity[end] > self.upper_bound:
                         keep = True
                     end += 1
 
@@ -88,8 +88,8 @@ class Hysteresis:
             else:
                 i += 1
 
-        # Remove pitch with low harmonicity
-        pitch[harmonicity < threshold] = torchcrepe.UNVOICED
+        # Remove pitch with low periodicity
+        pitch[periodicity < threshold] = torchcrepe.UNVOICED
 
         # Unwhiten
         pitch = pitch * std + mean

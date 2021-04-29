@@ -1,5 +1,5 @@
 # torchcrepe
-[![PyPI](https://img.shields.io/pypi/v/torchcrepe.svg)](https://pypi.python.org/pypi/torchcrepe) 
+[![PyPI](https://img.shields.io/pypi/v/torchcrepe.svg)](https://pypi.python.org/pypi/torchcrepe)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://pepy.tech/badge/torchcrepe)](https://pepy.tech/project/torchcrepe)
 
@@ -19,7 +19,7 @@ Perform the system-dependent PyTorch install using the instructions found
 
 ## Usage
 
-### Computing pitch and harmonicity from audio
+### Computing pitch and periodicity from audio
 
 
 ```python
@@ -57,8 +57,8 @@ pitch = torchcrepe.predict(audio,
                            device=device)
 ```
 
-A harmonicity metric similar to the Crepe confidence score can also be
-extracted by passing `return_harmonicity=True` to `torchcrepe.predict`.
+A periodicity metric similar to the Crepe confidence score can also be
+extracted by passing `return_periodicity=True` to `torchcrepe.predict`.
 
 By default, `torchcrepe` uses Viterbi decoding on the softmax of the network
 output. This is different than the original implementation, which uses a
@@ -78,8 +78,8 @@ torchcrepe.predict(..., decoder=torchcrepe.decode.weighted_argmax)
 torchcrepe.predict(..., decoder=torchcrepe.decode.argmax)
 ```
 
-When harmonicity is low, the pitch is less reliable. For some problems, it
-makes sense to mask these less reliable pitch values. However, the harmonicity
+When periodicity is low, the pitch is less reliable. For some problems, it
+makes sense to mask these less reliable pitch values. However, the periodicity
 can be noisy and the pitch has quantization artifacts. `torchcrepe` provides
 submodules `filter` and `threshold` for this purpose. The filter and threshold
 parameters should be tuned to your data. For clean speech, a 10-20 millisecond
@@ -90,10 +90,10 @@ window with a threshold of 0.21 has worked.
 win_length = 3
 
 # Median filter noisy confidence value
-harmonicity = torchcrepe.filter.median(harmonicity, win_length)
+periodicity = torchcrepe.filter.median(periodicity, win_length)
 
 # Remove inharmonic regions
-pitch = torchcrepe.threshold.At(.21)(pitch, harmonicity)
+pitch = torchcrepe.threshold.At(.21)(pitch, periodicity)
 
 # Optionally smooth pitch to remove quantization artifacts
 pitch = torchcrepe.filter.mean(pitch, win_length)
@@ -101,7 +101,7 @@ pitch = torchcrepe.filter.mean(pitch, win_length)
 
 For more fine-grained control over pitch thresholding, see
 `torchcrepe.threshold.Hysteresis`. This is especially useful for removing
-spurious voiced regions caused by noise in the harmonicity values, but
+spurious voiced regions caused by noise in the periodicity values, but
 has more parameters and may require more manual tuning to your data.
 
 
@@ -132,9 +132,9 @@ a `device` argument that can be used for device placement (e.g.,
 ```python
 torchcrepe.predict_from_file(audio_file, ...)
 torchcrepe.predict_from_file_to_file(
-    audio_file, output_pitch_file, output_harmonicity_file, ...)
+    audio_file, output_pitch_file, output_periodicity_file, ...)
 torchcrepe.predict_from_files_to_files(
-    audio_files, output_pitch_files, output_harmonicity_files, ...)
+    audio_files, output_pitch_files, output_periodicity_files, ...)
 
 torchcrepe.embed_from_file(audio_file, ...)
 torchcrepe.embed_from_file_to_file(audio_file, output_file, ...)
@@ -149,7 +149,7 @@ usage: python -m torchcrepe
     --audio_files AUDIO_FILES [AUDIO_FILES ...]
     --output_files OUTPUT_FILES [OUTPUT_FILES ...]
     [--hop_length HOP_LENGTH]
-    [--output_harmonicity_files OUTPUT_HARMONICITY_FILES [OUTPUT_HARMONICITY_FILES ...]]
+    [--output_periodicity_files OUTPUT_PERIODICITY_FILES [OUTPUT_PERIODICITY_FILES ...]]
     [--embed]
     [--fmin FMIN]
     [--fmax FMAX]
@@ -165,8 +165,8 @@ optional arguments:
                         The file to save pitch or embedding
   --hop_length HOP_LENGTH
                         The hop length of the analysis window
-  --output_harmonicity_files OUTPUT_HARMONICITY_FILES [OUTPUT_HARMONICITY_FILES ...]
-                        The file to save harmonicity
+  --output_periodicity_files OUTPUT_PERIODICITY_FILES [OUTPUT_PERIODICITY_FILES ...]
+                        The file to save periodicity
   --embed               Performs embedding instead of pitch prediction
   --fmin FMIN           The minimum frequency allowed
   --fmax FMAX           The maximum frequency allowed
