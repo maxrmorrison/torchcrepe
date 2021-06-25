@@ -56,7 +56,8 @@ def predict(audio,
             return_harmonicity=False,
             return_periodicity=False,
             batch_size=None,
-            device='cpu'):
+            device='cpu',
+            pad=True):
     """Performs pitch estimation
 
     Arguments
@@ -82,6 +83,8 @@ def predict(audio,
             The number of frames per batch
         device (string)
             The device used to run inference
+        pad (bool)
+            Whether to zero-pad the audio
 
     Returns
         pitch (torch.tensor [shape=(1, 1 + int(time // hop_length))])
@@ -109,7 +112,8 @@ def predict(audio,
                                sample_rate,
                                hop_length,
                                batch_size,
-                               device)
+                               device,
+                               pad)
         for frames in generator:
 
             # Infer independent probabilities for each pitch bin
@@ -153,7 +157,8 @@ def predict_from_file(audio_file,
                       return_harmonicity=False,
                       return_periodicity=False,
                       batch_size=None,
-                      device='cpu'):
+                      device='cpu',
+                      pad=True):
     """Performs pitch estimation from file on disk
 
     Arguments
@@ -177,6 +182,8 @@ def predict_from_file(audio_file,
             The number of frames per batch
         device (string)
             The device used to run inference
+        pad (bool)
+            Whether to zero-pad the audio
 
     Returns
         pitch (torch.tensor [shape=(1, 1 + int(time // hop_length))])
@@ -197,7 +204,8 @@ def predict_from_file(audio_file,
                    return_harmonicity,
                    return_periodicity,
                    batch_size,
-                   device)
+                   device,
+                   pad)
 
 
 def predict_from_file_to_file(audio_file,
@@ -210,7 +218,8 @@ def predict_from_file_to_file(audio_file,
                               model='full',
                               decoder=torchcrepe.decode.viterbi,
                               batch_size=None,
-                              device='cpu'):
+                              device='cpu',
+                              pad=True):
     """Performs pitch estimation from file on disk
 
     Arguments
@@ -236,6 +245,8 @@ def predict_from_file_to_file(audio_file,
             The number of frames per batch
         device (string)
             The device used to run inference
+        pad (bool)
+            Whether to zero-pad the audio
     """
     # Deprecate output_harmonicity_file
     if output_harmonicity_file is not None:
@@ -258,7 +269,8 @@ def predict_from_file_to_file(audio_file,
                                    False,
                                    output_periodicity_file is not None,
                                    batch_size,
-                                   device)
+                                   device,
+                                   pad)
 
     # Save to disk
     if output_periodicity_file is not None:
@@ -278,7 +290,8 @@ def predict_from_files_to_files(audio_files,
                                 model='full',
                                 decoder=torchcrepe.decode.viterbi,
                                 batch_size=None,
-                                device='cpu'):
+                                device='cpu',
+                                pad=True):
     """Performs pitch estimation from files on disk without reloading model
 
     Arguments
@@ -304,6 +317,8 @@ def predict_from_files_to_files(audio_files,
             The number of frames per batch
         device (string)
             The device used to run inference
+        pad (bool)
+            Whether to zero-pad the audio
     """
     # Deprecate output_harmonicity_files
     if output_harmonicity_files is not None:
@@ -335,7 +350,8 @@ def predict_from_files_to_files(audio_files,
                                   model,
                                   decoder,
                                   batch_size,
-                                  device)
+                                  device,
+                                  pad)
 
 ###############################################################################
 # Crepe pitch embedding
@@ -347,7 +363,8 @@ def embed(audio,
           hop_length=None,
           model='full',
           batch_size=None,
-          device='cpu'):
+          device='cpu',
+          pad=True):
     """Embeds audio to the output of CREPE's fifth maxpool layer
 
     Arguments
@@ -363,6 +380,8 @@ def embed(audio,
             The number of frames per batch
         device (string)
             The device to run inference on
+        pad (bool)
+            Whether to zero-pad the audio
 
     Returns
         embedding (torch.tensor [shape=(1,
@@ -371,7 +390,12 @@ def embed(audio,
     results = []
 
     # Preprocess audio
-    generator = preprocess(audio, sample_rate, hop_length, batch_size, device)
+    generator = preprocess(audio,
+                           sample_rate,
+                           hop_length,
+                           batch_size,
+                           device,
+                           pad)
     for frames in generator:
 
         # Infer pitch embeddings
@@ -391,7 +415,8 @@ def embed_from_file(audio_file,
                     hop_length=None,
                     model='full',
                     batch_size=None,
-                    device='cpu'):
+                    device='cpu',
+                    pad=True):
     """Embeds audio from disk to the output of CREPE's fifth maxpool layer
 
     Arguments
@@ -405,6 +430,8 @@ def embed_from_file(audio_file,
             The number of frames per batch
         device (string)
             The device to run inference on
+        pad (bool)
+            Whether to zero-pad the audio
 
     Returns
         embedding (torch.tensor [shape=(1,
@@ -414,7 +441,13 @@ def embed_from_file(audio_file,
     audio, sample_rate = torchcrepe.load.audio(audio_file)
 
     # Embed
-    return embed(audio, sample_rate, hop_length, model, batch_size, device)
+    return embed(audio,
+                 sample_rate,
+                 hop_length,
+                 model,
+                 batch_size,
+                 device,
+                 pad)
 
 
 def embed_from_file_to_file(audio_file,
@@ -422,7 +455,8 @@ def embed_from_file_to_file(audio_file,
                             hop_length=None,
                             model='full',
                             batch_size=None,
-                            device='cpu'):
+                            device='cpu',
+                            pad=True):
     """Embeds audio from disk and saves to disk
 
     Arguments
@@ -438,6 +472,8 @@ def embed_from_file_to_file(audio_file,
             The number of frames per batch
         device (string)
             The device to run inference on
+        pad (bool)
+            Whether to zero-pad the audio
     """
     # No use computing gradients if we're just saving to file
     with torch.no_grad():
@@ -447,7 +483,8 @@ def embed_from_file_to_file(audio_file,
                                     hop_length,
                                     model,
                                     batch_size,
-                                    device)
+                                    device,
+                                    pad)
 
         # Save to disk
         torch.save(embedding.detach(), output_file)
@@ -458,7 +495,8 @@ def embed_from_files_to_files(audio_files,
                               hop_length=None,
                               model='full',
                               batch_size=None,
-                              device='cpu'):
+                              device='cpu',
+                              pad=True):
     """Embeds audio from disk and saves to disk without reloading model
 
     Arguments
@@ -474,6 +512,8 @@ def embed_from_files_to_files(audio_files,
             The number of frames per batch
         device (string)
             The device to run inference on
+        pad (bool)
+            Whether to zero-pad the audio
     """
     # Setup iterator
     iterator = zip(audio_files, output_files)
@@ -486,7 +526,8 @@ def embed_from_files_to_files(audio_files,
                                 hop_length,
                                 model,
                                 batch_size,
-                                device)
+                                device,
+                                pad)
 
 
 ###############################################################################
@@ -585,7 +626,8 @@ def preprocess(audio,
                sample_rate,
                hop_length=None,
                batch_size=None,
-               device='cpu'):
+               device='cpu',
+               pad=True):
     """Convert audio to model input
 
     Arguments
@@ -599,6 +641,8 @@ def preprocess(audio,
             The number of frames per batch
         device (string)
             The device to run inference on
+        pad (bool)
+            Whether to zero-pad the audio
 
     Returns
         frames (torch.tensor [shape=(1 + int(time // hop_length), 1024)])
@@ -612,11 +656,15 @@ def preprocess(audio,
         hop_length = int(hop_length * SAMPLE_RATE / sample_rate)
 
     # Get total number of frames
-    total_frames = 1 + int(audio.size(1) // hop_length)
 
-    # Pad
-    audio = torch.nn.functional.pad(audio,
-                                    (WINDOW_SIZE // 2, WINDOW_SIZE // 2))
+    # Maybe pad
+    if pad:
+        total_frames = 1 + int(audio.size(1) // hop_length)
+        audio = torch.nn.functional.pad(
+            audio,
+            (WINDOW_SIZE // 2, WINDOW_SIZE // 2))
+    else:
+        total_frames = 1 + int((audio.size(1) - WINDOW_SIZE) // hop_length)
 
     # Default to running all frames in a single batch
     batch_size = total_frames if batch_size is None else batch_size

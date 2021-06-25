@@ -75,6 +75,10 @@ def parse_args():
         '--gpu',
         type=int,
         help='The gpu to perform inference on')
+    parser.add_argument(
+        '--no_pad',
+        action='store_true',
+        help='Whether to pad the audio')
 
     return parser.parse_args()
 
@@ -123,7 +127,8 @@ def main():
                                              args.hop_length,
                                              args.model,
                                              args.batch_size,
-                                             device)
+                                             device,
+                                             not args.no_pad)
     else:
         torchcrepe.predict_from_files_to_files(args.audio_files,
                                                args.output_files,
@@ -135,7 +140,8 @@ def main():
                                                args.model,
                                                decoder,
                                                args.batch_size,
-                                               device)
+                                               device,
+                                               not args.no_pad)
 
 
 # Run module entry point

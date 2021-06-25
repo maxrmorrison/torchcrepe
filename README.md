@@ -60,6 +60,9 @@ pitch = torchcrepe.predict(audio,
 A periodicity metric similar to the Crepe confidence score can also be
 extracted by passing `return_periodicity=True` to `torchcrepe.predict`.
 
+
+### Decoding
+
 By default, `torchcrepe` uses Viterbi decoding on the softmax of the network
 output. This is different than the original implementation, which uses a
 weighted average near the argmax of binary cross-entropy probabilities.
@@ -77,6 +80,9 @@ torchcrepe.predict(..., decoder=torchcrepe.decode.weighted_argmax)
 # Decode using argmax
 torchcrepe.predict(..., decoder=torchcrepe.decode.argmax)
 ```
+
+
+### Filtering and thresholding
 
 When periodicity is low, the pitch is less reliable. For some problems, it
 makes sense to mask these less reliable pitch values. However, the periodicity
@@ -103,6 +109,18 @@ For more fine-grained control over pitch thresholding, see
 `torchcrepe.threshold.Hysteresis`. This is especially useful for removing
 spurious voiced regions caused by noise in the periodicity values, but
 has more parameters and may require more manual tuning to your data.
+
+CREPE was not trained on silent audio. Therefore, it sometimes assigns high
+confidence to pitch bins in silent regions. You can use
+`torchcrepe.threshold.Silence` to manually set the periodicity in silent
+regions to zero.
+
+```python
+periodicity = torchcrepe.threshold.Silence(-60.)(periodicity,
+                                                 audio,
+                                                 sr,
+                                                 hop_length)
+```
 
 
 ### Computing the CREPE model output activations
@@ -156,6 +174,7 @@ usage: python -m torchcrepe
     [--model MODEL]
     [--decoder DECODER]
     [--gpu GPU]
+    [--no_pad]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -174,6 +193,7 @@ optional arguments:
   --decoder DECODER     The decoder to use. One of "argmax", "viterbi", or
                         "weighted_argmax"
   --gpu GPU             The gpu to perform inference on
+  --no_pad              Whether to pad the audio
 ```
 
 

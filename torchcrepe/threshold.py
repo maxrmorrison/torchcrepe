@@ -102,3 +102,33 @@ class Hysteresis:
             return pitch, torch.tensor(threshold, device=device)
 
         return pitch
+
+
+###############################################################################
+# Periodicity thresholding methods
+###############################################################################
+
+
+class Silence:
+    """Set periodicity to zero in silent regions"""
+
+    def __init__(self, value=-60):
+        self.value = value
+
+    def __call__(self,
+                 periodicity,
+                 audio,
+                 sample_rate=torchcrepe.SAMPLE_RATE,
+                 hop_length=None,
+                 pad=True):
+        # Don't modify in-place
+        periodicity = torch.clone(periodicity)
+
+        # Compute loudness
+        loudness = torchcrepe.loudness.a_weighted(
+            audio, sample_rate, hop_length, pad)
+
+        # Threshold silence
+        periodicity[loudness < self.value] = 0.
+
+        return periodicity
