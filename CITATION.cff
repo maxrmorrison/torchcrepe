@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the following metadata."
+authors:
+- family-names: "Morrison"
+  given-names: "Max"
+title: "torchcrepe"
+version: 0.0.15
+date-released: 2020-06-03
+url: "https://github.com/maxrmorrison/torchcrepe"
