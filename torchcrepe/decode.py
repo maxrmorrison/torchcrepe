@@ -69,8 +69,9 @@ def viterbi(logits):
     sequences = probs.cpu().numpy()
 
     # Perform viterbi decoding
-    bins = [librosa.sequence.viterbi(sequence, viterbi.transition)
-            for sequence in sequences]
+    bins = np.array([
+        librosa.sequence.viterbi(sequence, viterbi.transition).astype(np.int64)
+        for sequence in sequences])
 
     # Convert to pytorch
     bins = torch.tensor(bins, device=probs.device)
