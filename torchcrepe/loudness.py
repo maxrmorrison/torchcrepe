@@ -47,7 +47,7 @@ def a_weighted(audio, sample_rate, hop_length=None, pad=True):
 
     # Take stft
     stft = librosa.stft(audio,
-                        torchcrepe.WINDOW_SIZE,
+                        n_fft=torchcrepe.WINDOW_SIZE,
                         hop_length=hop_length,
                         win_length=torchcrepe.WINDOW_SIZE,
                         center=pad,
