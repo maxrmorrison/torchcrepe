@@ -25,7 +25,7 @@ def weighted_argmax(logits):
 
     # Find bounds of analysis window
     start = torch.max(torch.tensor(0, device=logits.device), bins - 4)
-    end = torch.min(torch.tensor(logits.size(2), device=logits.device), bins + 5)
+    end = torch.min(torch.tensor(logits.size(1), device=logits.device), bins + 5)
 
     # Mask out everything outside of window
     for batch in range(logits.size(0)):
