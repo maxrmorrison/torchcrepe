@@ -128,6 +128,7 @@ def predict(audio,
                                  fmin,
                                  fmax,
                                  decoder,
+                                 return_harmonicity,
                                  return_periodicity)
 
             # Place on same device as audio to allow very long inputs
