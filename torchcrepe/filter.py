@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+from torch.nn import functional as F
 
 ###############################################################################
 # Sequence filters
@@ -19,7 +19,41 @@ def mean(signals, win_length=9):
     Returns
         filtered (torch.tensor (shape=(batch, time)))
     """
-    return nanfilter(signals, win_length, nanmean)
+
+    assert signals.dim() == 2, "Input tensor must have 2 dimensions (batch_size, width)"
+    signals = signals.unsqueeze(1)
+
+    # Apply the mask by setting masked elements to zero, or make NaNs zero
+    mask = ~torch.isnan(signals)
+    masked_x = torch.where(mask, signals, torch.zeros_like(signals))
+
+    # Create a ones kernel with the same number of channels as the input tensor
+    ones_kernel = torch.ones(signals.size(1), 1, win_length, device=signals.device)
+
+    # Perform sum pooling
+    sum_pooled = F.conv1d(
+        masked_x,
+        ones_kernel,
+        stride=1,
+        padding=win_length // 2,
+    )
+
+    # Count the non-masked (valid) elements in each pooling window
+    valid_count = F.conv1d(
+        mask.float(),
+        ones_kernel,
+        stride=1,
+        padding=win_length // 2,
+    )
+    valid_count = valid_count.clamp(min=1)  # Avoid division by zero
+
+    # Perform masked average pooling
+    avg_pooled = sum_pooled / valid_count
+
+    # Fill zero values with NaNs
+    avg_pooled[avg_pooled == 0] = float("nan")
+
+    return avg_pooled.squeeze(1)
 
 
 def median(signals, win_length):
@@ -34,7 +68,42 @@ def median(signals, win_length):
     Returns
         filtered (torch.tensor (shape=(batch, time)))
     """
-    return nanfilter(signals, win_length, nanmedian)
+
+    assert signals.dim() == 2, "Input tensor must have 2 dimensions (batch_size, width)"
+    signals = signals.unsqueeze(1)
+
+    mask = ~torch.isnan(signals)
+    masked_x = torch.where(mask, signals, torch.zeros_like(signals))
+    padding = win_length // 2
+
+    x = F.pad(masked_x, (padding, padding), mode="reflect")
+    mask = F.pad(mask.float(), (padding, padding), mode="constant", value=0)
+
+    x = x.unfold(2, win_length, 1)
+    mask = mask.unfold(2, win_length, 1)
+
+    x = x.contiguous().view(x.size()[:3] + (-1,))
+    mask = mask.contiguous().view(mask.size()[:3] + (-1,))
+
+    # Combine the mask with the input tensor
+    x_masked = torch.where(mask.bool(), x, float("inf"))
+
+    # Sort the masked tensor along the last dimension
+    x_sorted, _ = torch.sort(x_masked, dim=-1)
+
+    # Compute the count of non-masked (valid) values
+    valid_count = mask.sum(dim=-1)
+
+    # Calculate the index of the median value for each pooling window
+    median_idx = ((valid_count - 1) // 2).clamp(min=0)
+
+    # Gather the median values using the calculated indices
+    median_pooled = x_sorted.gather(-1, median_idx.unsqueeze(-1).long()).squeeze(-1)
+
+    # Fill infinite values with NaNs
+    median_pooled[torch.isinf(median_pooled)] = float("nan")
+
+    return median_pooled.squeeze(1)
 
 
 ###############################################################################
