@@ -1,7 +1,11 @@
-# torchcrepe
+<h1 align="center">torchcrepe</h1>
+<div align="center">
+
 [![PyPI](https://img.shields.io/pypi/v/torchcrepe.svg)](https://pypi.python.org/pypi/torchcrepe)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://pepy.tech/badge/torchcrepe)](https://pepy.tech/project/torchcrepe)
+
+</div>
 
 Pytorch implementation of the CREPE [1] pitch tracker. The original Tensorflow
 implementation can be found [here](https://github.com/marl/crepe/). The
