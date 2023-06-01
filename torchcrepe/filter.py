@@ -86,7 +86,7 @@ def median(signals, win_length):
     mask = mask.contiguous().view(mask.size()[:3] + (-1,))
 
     # Combine the mask with the input tensor
-    x_masked = torch.where(mask.bool(), x, float("inf"))
+    x_masked = torch.where(mask.bool(), x.double(), float("inf")).to(x)
 
     # Sort the masked tensor along the last dimension
     x_sorted, _ = torch.sort(x_masked, dim=-1)
