@@ -117,7 +117,7 @@ def predict(audio,
         for frames in generator:
 
             # Infer independent probabilities for each pitch bin
-            probabilities = infer(frames, model)
+            probabilities = infer(frames, model, False, device)
 
             # shape=(batch, 360, time / hop_length)
             probabilities = probabilities.reshape(
@@ -400,7 +400,7 @@ def embed(audio,
     for frames in generator:
 
         # Infer pitch embeddings
-        embedding = infer(frames, model, embed=True)
+        embedding = infer(frames, model, embed=True, device)
 
         # shape=(batch, time / hop_length, 32, embedding_size)
         result = embedding.reshape(audio.size(0), frames.size(0), 32, -1)
@@ -536,7 +536,7 @@ def embed_from_files_to_files(audio_files,
 ###############################################################################
 
 
-def infer(frames, model='full', embed=False):
+def infer(frames, model='full', embed=False, device='cpu'):
     """Forward pass through the model
 
     Arguments
@@ -555,10 +555,10 @@ def infer(frames, model='full', embed=False):
     # Load the model if necessary
     if not hasattr(infer, 'model') or not hasattr(infer, 'capacity') or \
        (hasattr(infer, 'capacity') and infer.capacity != model):
-        torchcrepe.load.model(frames.device, model)
+        torchcrepe.load.model(device, model)
 
     # Move model to correct device (no-op if devices are the same)
-    infer.model = infer.model.to(frames.device)
+    infer.model = infer.model.to(device)
 
     # Apply model
     return infer.model(frames, embed=embed)
