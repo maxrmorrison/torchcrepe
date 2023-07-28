@@ -117,7 +117,7 @@ def predict(audio,
         for frames in generator:
 
             # Infer independent probabilities for each pitch bin
-            probabilities = infer(frames, model, False, device)
+            probabilities = infer(frames, model, device, embed=False)
 
             # shape=(batch, 360, time / hop_length)
             probabilities = probabilities.reshape(
@@ -400,7 +400,7 @@ def embed(audio,
     for frames in generator:
 
         # Infer pitch embeddings
-        embedding = infer(frames, model, embed=True, device)
+        embedding = infer(frames, model, device, embed=True)
 
         # shape=(batch, time / hop_length, 32, embedding_size)
         result = embedding.reshape(audio.size(0), frames.size(0), 32, -1)
@@ -536,7 +536,7 @@ def embed_from_files_to_files(audio_files,
 ###############################################################################
 
 
-def infer(frames, model='full', embed=False, device='cpu'):
+def infer(frames, model='full', device='cpu', embed=False):
     """Forward pass through the model
 
     Arguments
