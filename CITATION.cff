@@ -4,6 +4,6 @@ authors:
 - family-names: "Morrison"
   given-names: "Max"
 title: "torchcrepe"
-version: 0.0.16
-date-released: 2022-04-03
+version: 0.0.22
+date-released: 2023-10-09
 url: "https://github.com/maxrmorrison/torchcrepe"
