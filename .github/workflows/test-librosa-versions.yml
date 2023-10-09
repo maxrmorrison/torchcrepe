@@ -1,0 +1,31 @@
+name: run tests on librosa
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        librosa-version: ["0.9.1", "0.9.2", "0.10.0", "0.10.1"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . 
+          pip install librosa==${{ matrix.librosa-version }}
+      - name: Display Python version
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -c "import librosa; print(librosa.__version__)"
+      - name: Run tests
+        run: |
+          pip install pytest
+          python -m pytest
