@@ -30,11 +30,11 @@ def weighted_argmax(logits):
     # Mask out everything outside of window
     for batch in range(logits.size(0)):
         for time in range(logits.size(2)):
-            logits[batch, :start[batch, time], time] = -float('inf')
-            logits[batch, end[batch, time]:, time] = -float('inf')
+            logits[batch, : start[batch, time], time] = -float("inf")
+            logits[batch, end[batch, time] :, time] = -float("inf")
 
     # Construct weights
-    if not hasattr(weighted_argmax, 'weights'):
+    if not hasattr(weighted_argmax, "weights"):
         weights = torchcrepe.convert.bins_to_cents(torch.arange(360))
         weighted_argmax.weights = weights[None, :, None]
 
@@ -55,7 +55,7 @@ def weighted_argmax(logits):
 def viterbi(logits):
     """Sample observations using viterbi decoding"""
     # Create viterbi transition matrix
-    if not hasattr(viterbi, 'transition'):
+    if not hasattr(viterbi, "transition"):
         xx, yy = np.meshgrid(range(360), range(360))
         transition = np.maximum(12 - abs(xx - yy), 0)
         transition = transition / transition.sum(axis=1, keepdims=True)
@@ -68,10 +68,16 @@ def viterbi(logits):
     # Convert to numpy
     sequences = probs.cpu().numpy()
 
+    # convert to float32
+    sequences = sequences.astype(np.float32)
+
     # Perform viterbi decoding
-    bins = np.array([
-        librosa.sequence.viterbi(sequence, viterbi.transition).astype(np.int64)
-        for sequence in sequences])
+    bins = np.array(
+        [
+            librosa.sequence.viterbi(sequence, viterbi.transition).astype(np.int64)
+            for sequence in sequences
+        ]
+    )
 
     # Convert to pytorch
     bins = torch.tensor(bins, device=probs.device)
