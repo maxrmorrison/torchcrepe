@@ -97,7 +97,9 @@ class Crepe(torch.nn.Module):
         self.conv6_BN = batch_norm_fn(num_features=out_channels[5])
 
         self.classifier = torch.nn.Linear(
-            in_features=self.in_features, out_features=torchcrepe.PITCH_BINS
+            in_features=self.in_features,
+            out_features=torchcrepe.PITCH_BINS,
+            dtype=dtype,
         )
 
     def forward(self, x, embed=False):
