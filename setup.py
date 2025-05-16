@@ -8,7 +8,7 @@ with open('README.md', encoding='utf8') as file:
 setup(
     name='torchcrepe',
     description='Pytorch implementation of CREPE pitch tracker',
-    version='0.0.23',
+    version='0.0.24',
     author='Max Morrison',
     author_email='maxrmorrison@gmail.com',
     url='https://github.com/maxrmorrison/torchcrepe',
