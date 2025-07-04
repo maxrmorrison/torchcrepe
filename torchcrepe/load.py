@@ -1,12 +1,8 @@
-import os
-
-import numpy as np
 import torch
 import torchaudio
-from scipy.io import wavfile
 
 import torchcrepe
-
+from huggingface_hub import hf_hub_download
 
 def audio(filename):
     """Load audio from disk"""
@@ -20,9 +16,8 @@ def model(device, capacity='full'):
     torchcrepe.infer.model = torchcrepe.Crepe(capacity)
 
     # Load weights
-    file = os.path.join(os.path.dirname(__file__), 'assets', f'{capacity}.pth')
-    torchcrepe.infer.model.load_state_dict(
-        torch.load(file, map_location=device, weights_only=True))
+    file = hf_hub_download("shethjenil/Audio2Midi_Models",f"crepe_{capacity}.pt")
+    torchcrepe.infer.model.load_state_dict(torch.load(file, map_location=device, weights_only=True))
 
     # Place on device
     torchcrepe.infer.model = torchcrepe.infer.model.to(torch.device(device))
