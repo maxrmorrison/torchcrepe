@@ -72,7 +72,7 @@ def predict(audio,
         fmax (float)
             The maximum allowable frequency in Hz
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         decoder (function)
             The decoder to use. See decode.py for decoders.
         return_harmonicity (bool) [DEPRECATED]
@@ -172,7 +172,7 @@ def predict_from_file(audio_file,
         fmax (float)
             The maximum allowable frequency in Hz
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         decoder (function)
             The decoder to use. See decode.py for decoders.
         return_harmonicity (bool) [DEPRECATED]
@@ -239,7 +239,7 @@ def predict_from_file_to_file(audio_file,
         fmax (float)
             The maximum allowable frequency in Hz
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         decoder (function)
             The decoder to use. See decode.py for decoders.
         batch_size (int)
@@ -311,7 +311,7 @@ def predict_from_files_to_files(audio_files,
         fmax (float)
             The maximum allowable frequency in Hz
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         decoder (function)
             The decoder to use. See decode.py for decoders.
         batch_size (int)
@@ -376,7 +376,7 @@ def embed(audio,
         hop_length (int)
             The hop_length in samples
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         batch_size (int)
             The number of frames per batch
         device (string)
@@ -426,7 +426,7 @@ def embed_from_file(audio_file,
         hop_length (int)
             The hop_length in samples
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         batch_size (int)
             The number of frames per batch
         device (string)
@@ -468,7 +468,7 @@ def embed_from_file_to_file(audio_file,
         output_file (string)
             The file to save the embedding
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         batch_size (int)
             The number of frames per batch
         device (string)
@@ -508,7 +508,7 @@ def embed_from_files_to_files(audio_files,
         hop_length (int)
             The hop_length in samples
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         batch_size (int)
             The number of frames per batch
         device (string)
@@ -543,7 +543,7 @@ def infer(frames, model='full', device='cpu', embed=False):
         frames (torch.tensor [shape=(time / hop_length, 1024)])
             The network input
         model (string)
-            The model capacity. One of 'full' or 'tiny'.
+            The model capacity. One of 'tiny', 'small', 'medium', 'large', 'full'.
         embed (bool)
             Whether to stop inference at the intermediate embedding layer
 

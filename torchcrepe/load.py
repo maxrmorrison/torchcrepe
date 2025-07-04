@@ -20,7 +20,7 @@ def model(device, capacity='full'):
     torchcrepe.infer.model = torchcrepe.Crepe(capacity)
 
     # Load weights
-    file = os.path.join(os.path.dirname(__file__), 'assets', f'{capacity}.pth')
+    file = os.path.join(os.path.dirname(__file__), 'assets', f'{capacity}.pt')
     torchcrepe.infer.model.load_state_dict(
         torch.load(file, map_location=device, weights_only=True))
 

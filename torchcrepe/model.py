@@ -16,18 +16,12 @@ class Crepe(torch.nn.Module):
 
     def __init__(self, model='full'):
         super().__init__()
-
         # Model-specific layer parameters
-        if model == 'full':
-            in_channels = [1, 1024, 128, 128, 128, 256]
-            out_channels = [1024, 128, 128, 128, 256, 512]
-            self.in_features = 2048
-        elif model == 'tiny':
-            in_channels = [1, 128, 16, 16, 16, 32]
-            out_channels = [128, 16, 16, 16, 32, 64]
-            self.in_features = 256
-        else:
-            raise ValueError(f'Model {model} is not supported')
+        model_type_importance = {'tiny': 4, 'small': 8, 'medium': 16, 'large': 24, 'full': 32}[model]
+        out_channels = [n * model_type_importance for n in [32, 4, 4, 4, 8, 16]]
+        in_channels = [n * model_type_importance for n in [32, 4, 4, 4, 8]]
+        in_channels.insert(0,1)
+        self.in_features = 64*model_type_importance
 
         # Shared layer parameters
         kernel_sizes = [(512, 1)] + 5 * [(64, 1)]
