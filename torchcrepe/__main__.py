@@ -10,7 +10,7 @@ import torchcrepe
 ###############################################################################
 
 
-def parse_args():
+def parse_args(argv=None):
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser()
 
@@ -65,8 +65,8 @@ def parse_args():
     parser.add_argument(
         '--decoder',
         default='viterbi',
-        help='The decoder to use. One of "argmax", "viterbi", or ' +
-             '"weighted_argmax"')
+        choices=sorted(torchcrepe.decode.DECODERS),
+        help='The decoder to use')
     parser.add_argument(
         '--batch_size',
         type=int,
@@ -80,7 +80,7 @@ def parse_args():
         action='store_true',
         help='Whether to pad the audio')
 
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def make_parent_directory(file):
@@ -113,12 +113,7 @@ def main():
     device = 'cpu' if args.gpu is None else f'cuda:{args.gpu}'
 
     # Get decoder
-    if args.decoder == 'argmax':
-        decoder = torchcrepe.decode.argmax
-    elif args.decoder == 'weighted_argmax':
-        decoder = torchcrepe.decode.weighted_argmax
-    elif args.decoder == 'viterbi':
-        decoder = torchcrepe.decode.viterbi
+    decoder = torchcrepe.decode.get_decoder(args.decoder)
 
     # Infer pitch or embedding and save to disk
     if args.embed:
@@ -144,5 +139,5 @@ def main():
                                                not args.no_pad)
 
 
-# Run module entry point
-main()
+if __name__ == '__main__':
+    main()
